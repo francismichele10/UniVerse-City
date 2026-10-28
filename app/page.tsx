@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { getPublishedPosts } from '@/lib/posts';
 import { getSettings } from '@/lib/settings';
@@ -9,8 +10,6 @@ import { Reveal } from '@/lib/Reveal';
 
 export const dynamic = 'force-dynamic';
 
-const SITE_URL = 'https://universecityhub.com';
-
 export default async function HomePage() {
   const [posts, settings] = await Promise.all([
     getPublishedPosts(),
@@ -19,25 +18,11 @@ export default async function HomePage() {
 
   const [lead, ...rest] = posts;
 
-  const websiteJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: 'UniVerse-City',
-    url: SITE_URL,
-  };
-
   const secondary = rest.slice(0, 6);
   const more = rest.slice(6, 9);
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(websiteJsonLd),
-        }}
-      />
-
       <main>
         <Masthead settings={settings} />
 
