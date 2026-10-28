@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -32,8 +33,11 @@ export async function generateMetadata({
   return {
     title: category,
     description: `Latest ${category} stories from UniVerse-City.`,
+    alternates: {
+      canonical: `/category/${slug}`,
+    },
     robots: {
-      index: false,
+      index: true,
       follow: true,
     },
   };
