@@ -72,9 +72,9 @@ export default async function InterviewsPage() {
                       <h3 className="mt-2 font-serif text-2xl leading-tight tracking-[-0.02em] transition-colors group-hover:text-[#1f3a5f]">
                         {interview.title}
                       </h3>
-                      {interview.description && (
+                      {(interview.shortDescription || interview.description) && (
                         <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted">
-                          {interview.description}
+                          {interview.shortDescription || interview.description}
                         </p>
                       )}
                     </div>

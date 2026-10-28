@@ -10,16 +10,8 @@ import {
   updateInterview,
 } from '@/lib/interviews';
 import { auth } from '@/lib/firebaseAuth';
-import { formatDate, toDate } from '@/lib/date';
+import { formatDate } from '@/lib/date';
 import type { Interview, InterviewStatus } from '@/lib/types';
-
-function todayValue() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 function statusLabel(status: InterviewStatus) {
   return (
@@ -41,8 +33,7 @@ export default function AdminInterviewsPage() {
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [publishAt, setPublishAt] = useState('');
-  const [status, setStatus] = useState<InterviewStatus>('draft');
+  const [shortDescription, setShortDescription] = useState('');
 
   const loadInterviews = useCallback(async () => {
     setLoading(true);
@@ -57,7 +48,6 @@ export default function AdminInterviewsPage() {
   }, []);
 
   useEffect(() => {
-    setPublishAt(todayValue());
     void loadInterviews();
   }, [loadInterviews]);
 
@@ -66,8 +56,7 @@ export default function AdminInterviewsPage() {
     setYoutubeUrl('');
     setTitle('');
     setDescription('');
-    setPublishAt(todayValue());
-    setStatus('draft');
+    setShortDescription('');
     setError('');
     setNotice('');
   }
@@ -77,9 +66,7 @@ export default function AdminInterviewsPage() {
     setYoutubeUrl(interview.youtubeUrl);
     setTitle(interview.title);
     setDescription(interview.description || '');
-    const date = toDate(interview.publishAt);
-    setPublishAt(date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : todayValue());
-    setStatus(interview.status);
+    setShortDescription(interview.shortDescription || '');
     setError('');
     setNotice('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -102,34 +89,29 @@ export default function AdminInterviewsPage() {
       setError('Enter a valid YouTube video link (watch, youtu.be, shorts, live or embed URL).');
       return;
     }
-    if (!publishAt) {
-      setError('Choose a publication date.');
-      return;
-    }
-
     setSaving(true);
     try {
       const data = {
         title: cleanTitle,
         description: description.trim(),
+        shortDescription: shortDescription.trim(),
         youtubeUrl: cleanUrl,
         youtubeVideoId: videoId,
-        status,
-        // Use local midday to avoid the date appearing one day earlier in some time zones.
-        publishAt: new Date(`${publishAt}T12:00:00`),
+        status: 'published' as const,
+        // Publish immediately; there is no draft or scheduled-publication step.
+        publishAt: new Date(),
         authorId: auth.currentUser?.uid || '',
       };
 
+      const wasEditing = Boolean(editingId);
       if (editingId) {
         await updateInterview(editingId, data);
-        setNotice('Interview updated.');
       } else {
         await createInterview(data);
-        setNotice(status === 'published' ? 'Interview published.' : 'Interview saved as a draft.');
       }
 
       resetForm();
-      setNotice(editingId ? 'Interview updated.' : (status === 'published' ? 'Interview published.' : 'Interview saved as a draft.'));
+      setNotice(wasEditing ? 'Interview updated and published.' : 'Interview published.');
       await loadInterviews();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save the interview.');
@@ -183,7 +165,7 @@ export default function AdminInterviewsPage() {
       <section className="border-b border-rule py-8">
         <div className="mb-5">
           <h2 className="font-serif text-2xl">{editingId ? 'Edit interview' : 'Add an interview'}</h2>
-          <p className="mt-1 text-xs leading-5 text-muted">Paste the YouTube link, then add the title, description and publication date.</p>
+          <p className="mt-1 text-xs leading-5 text-muted">Paste the YouTube link, add the title and description, then publish immediately. You can edit it later if needed.</p>
         </div>
 
         <form onSubmit={handleSave} className="grid gap-5">
@@ -221,66 +203,35 @@ export default function AdminInterviewsPage() {
           </label>
 
           <label className="block text-xs text-muted">
-            Description
+            Short preview <span className="text-muted">(shown on the public Interviews tab)</span>
+            <textarea
+              rows={2}
+              maxLength={240}
+              value={shortDescription}
+              onChange={(event) => setShortDescription(event.target.value)}
+              placeholder="Write a concise teaser that makes people want to watch."
+              className="form-field mt-1"
+            />
+            <span className="mt-1 block text-[11px] text-muted">{shortDescription.length}/240 characters. This wording is separate from the full description.</span>
+          </label>
+
+          <label className="block text-xs text-muted">
+            Full description <span className="text-muted">(shown below the video)</span>
             <textarea
               rows={4}
               maxLength={2000}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Briefly introduce the guest and what viewers will learn."
+              placeholder="Introduce the guest and explain what viewers will learn."
               className="form-field mt-1"
             />
           </label>
 
-          <div className="grid gap-5 sm:grid-cols-2">
-            <label className="block text-xs text-muted">
-              Publication date <span className="text-red-700">*</span>
-              <input type="date" required value={publishAt} onChange={(event) => setPublishAt(event.target.value)} className="form-field mt-1" />
-              <span className="mt-1 block text-[11px] leading-5">Future dates stay hidden until the date arrives.</span>
-            </label>
-
-            <fieldset className="min-w-0">
-              <legend className="text-xs text-muted">Visibility</legend>
-              <div className="mt-1 grid gap-2 sm:grid-cols-1" role="radiogroup" aria-label="Interview visibility">
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={status === 'draft'}
-                  onClick={() => setStatus('draft')}
-                  className={`flex min-h-12 w-full items-start gap-3 border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${status === 'draft' ? 'border-ink bg-[#f3f1eb]' : 'border-rule hover:bg-[#f8f7f3]'}`}
-                >
-                  <span aria-hidden="true" className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${status === 'draft' ? 'border-ink' : 'border-[#999]'}`}>
-                    {status === 'draft' && <span className="h-2 w-2 rounded-full bg-ink" />}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-ink">Draft</span>
-                    <span className="mt-0.5 block text-xs leading-5 text-muted">Hidden from visitors.</span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={status === 'published'}
-                  onClick={() => setStatus('published')}
-                  className={`flex min-h-12 w-full items-start gap-3 border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${status === 'published' ? 'border-[#7f9b7c] bg-[#f1f7f0]' : 'border-rule hover:bg-[#f8f7f3]'}`}
-                >
-                  <span aria-hidden="true" className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${status === 'published' ? 'border-[#37613c]' : 'border-[#999]'}`}>
-                    {status === 'published' && <span className="h-2 w-2 rounded-full bg-[#37613c]" />}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-ink">Published</span>
-                    <span className="mt-0.5 block text-xs leading-5 text-muted">Visible to visitors on or after the publication date.</span>
-                  </span>
-                </button>
-              </div>
-            </fieldset>
-          </div>
-
-          <div className="flex flex-col gap-2 border-t border-rule pt-5 sm:flex-row sm:gap-3">
-            <button type="submit" disabled={saving} className="min-h-12 w-full border border-ink bg-ink px-5 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#343832] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
-              {saving ? 'Saving…' : editingId ? 'Save changes' : status === 'published' ? 'Publish interview' : 'Save draft'}
+          <div className="flex flex-col gap-3 border-t border-rule pt-5 sm:flex-row">
+            <button type="submit" disabled={saving} className="border border-ink bg-ink px-5 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#343832] disabled:cursor-not-allowed disabled:opacity-60">
+              {saving ? 'Publishing…' : editingId ? 'Save changes & publish' : 'Publish interview'}
             </button>
-            {editingId && <button type="button" onClick={resetForm} className="min-h-12 w-full border border-rule px-5 py-3 text-xs font-semibold uppercase tracking-[0.12em] hover:bg-[#f3f1eb] sm:w-auto">Cancel editing</button>}
+            {editingId && <button type="button" onClick={resetForm} className="border border-rule px-5 py-3 text-xs font-semibold uppercase tracking-[0.12em] hover:bg-[#f3f1eb]">Cancel editing</button>}
           </div>
         </form>
       </section>
@@ -289,7 +240,7 @@ export default function AdminInterviewsPage() {
         <div className="flex flex-col gap-2 border-b border-rule pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="font-serif text-2xl">Saved interviews</h2>
-            <p className="mt-1 text-xs text-muted">Manage drafts and published videos.</p>
+            <p className="mt-1 text-xs text-muted">Manage published interviews. Edit any interview and save your changes immediately.</p>
           </div>
           <span className="text-xs text-muted">{interviews.length} {interviews.length === 1 ? 'interview' : 'interviews'}</span>
         </div>
@@ -311,13 +262,13 @@ export default function AdminInterviewsPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">{statusLabel(interview.status)}<span className="text-xs text-muted">Date: {formatDate(interview.publishAt, { month: 'short', day: 'numeric', year: 'numeric' }, 'Not set')}</span></div>
                   <h3 className="mt-2 break-words font-serif text-xl leading-tight">{interview.title}</h3>
-                  {interview.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted">{interview.description}</p>}
+                  {(interview.shortDescription || interview.description) && <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted">{interview.shortDescription || interview.description}</p>}
                   <p className="mt-2 break-all text-xs text-muted">{interview.youtubeUrl}</p>
-                  <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
-                    <button type="button" onClick={() => startEditing(interview)} className="min-h-11 border border-rule px-3 py-2 text-xs font-semibold hover:bg-[#f3f1eb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">Edit</button>
-                    <button type="button" onClick={() => void toggleStatus(interview)} className="min-h-11 border border-rule px-3 py-2 text-xs font-semibold hover:bg-[#f3f1eb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">{interview.status === 'published' ? 'Unpublish' : 'Publish'}</button>
-                    {interview.status === 'published' && <a href={`/interviews/${interview.id}`} target="_blank" rel="noreferrer" className="flex min-h-11 items-center justify-center border border-rule px-3 py-2 text-xs font-semibold hover:bg-[#f3f1eb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">View on site</a>}
-                    <button type="button" onClick={() => void removeInterview(interview)} className="min-h-11 border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">Delete</button>
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">
+                    <button type="button" onClick={() => startEditing(interview)} className="editorial-link">Edit</button>
+                    <button type="button" onClick={() => void toggleStatus(interview)} className="editorial-link">{interview.status === 'published' ? 'Unpublish' : 'Publish'}</button>
+                    {interview.status === 'published' && <a href={`/interviews/${interview.id}`} className="editorial-link">View on site</a>}
+                    <button type="button" onClick={() => void removeInterview(interview)} className="text-red-700 underline underline-offset-2">Delete</button>
                   </div>
                 </div>
               </article>

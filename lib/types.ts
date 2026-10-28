@@ -75,6 +75,7 @@ export interface Interview {
   id: string;
   title: string;
   description: string;
+  shortDescription?: string;
   youtubeUrl: string;
   youtubeVideoId: string;
   status: InterviewStatus;

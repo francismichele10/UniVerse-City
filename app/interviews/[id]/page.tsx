@@ -2,11 +2,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getPublishedInterviewById } from '@/lib/interviews';
-import { getPublishedInterviews } from '@/lib/interviews';
 import { getSettings } from '@/lib/settings';
 import { Masthead } from '@/lib/Masthead';
 import { formatDate } from '@/lib/date';
-import CopyrightNotice from '@/components/CopyrightNotice';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,10 +26,6 @@ export default async function InterviewDetailPage({ params }: PageProps) {
   ]);
   if (!interview) notFound();
 
-  const moreInterviews = (await getPublishedInterviews())
-    .filter((item) => item.id !== interview.id)
-    .slice(0, 3);
-
   return (
     <main>
       <Masthead settings={settings} currentPage="interviews" />
@@ -39,16 +33,13 @@ export default async function InterviewDetailPage({ params }: PageProps) {
         <Link href="/interviews" className="editorial-link text-xs font-semibold uppercase tracking-[0.12em]">
           ← All interviews
         </Link>
-        <header className="mx-auto mt-6 max-w-3xl">
+        <header className="mt-6 max-w-3xl">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brass">
             Interview · {formatDate(interview.publishAt, { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
           <h2 className="mt-3 font-serif text-4xl leading-tight tracking-[-0.035em] sm:text-5xl">
             {interview.title}
           </h2>
-          {interview.description && (
-            <p className="mt-4 text-base leading-7 text-muted">{interview.description}</p>
-          )}
         </header>
 
         <div className="mt-8 aspect-video overflow-hidden bg-black shadow-sm">
@@ -63,28 +54,14 @@ export default async function InterviewDetailPage({ params }: PageProps) {
           />
         </div>
 
-        {moreInterviews.length > 0 && (
-          <section className="mt-12 border-t border-rule pt-8">
-            <h3 className="font-serif text-2xl">More interviews</h3>
-            <div className="mt-5 grid gap-6 sm:grid-cols-3">
-              {moreInterviews.map((item) => (
-                <Link key={item.id} href={`/interviews/${item.id}`} className="group">
-                  <div className="aspect-video overflow-hidden bg-[#eeece6]">
-                    <img
-                      src={`https://i.ytimg.com/vi/${item.youtubeVideoId}/hqdefault.jpg`}
-                      alt=""
-                      loading="lazy"
-                      className="h-full w-full object-cover transition group-hover:scale-[1.03]"
-                    />
-                  </div>
-                  <p className="mt-3 font-serif text-lg leading-tight group-hover:text-[#1f3a5f]">{item.title}</p>
-                </Link>
-              ))}
-            </div>
+        {interview.description && (
+          <section className="mt-6 max-w-3xl">
+            <h3 className="font-serif text-2xl">About this interview</h3>
+            <p className="mt-3 whitespace-pre-line text-base leading-7 text-muted">{interview.description}</p>
           </section>
         )}
+
       </article>
-      <CopyrightNotice />
     </main>
   );
 }
