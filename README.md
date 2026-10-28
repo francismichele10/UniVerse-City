@@ -78,3 +78,24 @@ Firebase Storage is not used, since it now requires a paid Blaze plan.
 - Build a media library screen listing everything uploaded to your
   Cloudinary account (their Admin API supports this) — right now uploads
   happen inline per-post only.
+
+
+## Interviews (YouTube embeds)
+
+The Interviews feature stores only interview metadata in Firestore. Video files remain hosted by YouTube, so the website does not upload interview videos to Firebase Storage or Cloudinary.
+
+- Public gallery: `/interviews`
+- Individual interview/player: `/interviews/[id]`
+- Admin management: `/admin/interviews`
+- Firestore collection: `interviews`
+- Fields: title, description, YouTube URL/video ID, status, publication date, author UID, and timestamps.
+- Drafts are visible only to administrators. Published interviews appear publicly when their publication date has arrived.
+- The public player uses YouTube's privacy-enhanced `youtube-nocookie.com` embed domain.
+
+After updating the source, deploy the updated Firestore rules and indexes to the same Firebase project before using the Interviews admin page:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+Then run the site locally with `npm run dev`, sign in at `/admin/login`, and open `/admin/interviews`. A YouTube link and title are required; description is optional. Saving as Draft does not publish the interview.

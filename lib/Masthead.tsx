@@ -21,7 +21,7 @@ export function Masthead({
 }: {
   settings: SiteSettings;
   currentCategory?: string;
-  currentPage?: 'about';
+  currentPage?: 'about' | 'interviews';
   showNav?: boolean;
 }) {
   const navScrollRef = useRef<HTMLDivElement>(null);
@@ -191,6 +191,16 @@ export function Masthead({
                     </Link>
                   );
                 })}
+
+                {/* INTERVIEWS */}
+                <Link
+                  href="/interviews"
+                  className={`nav-link ${
+                    currentPage === 'interviews' ? 'nav-link-active' : ''
+                  }`}
+                >
+                  Interviews
+                </Link>
 
                 {/* ABOUT */}
                 <Link

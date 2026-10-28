@@ -67,3 +67,19 @@ export interface SiteSettings {
   aboutIntro: string;
   team: TeamMember[];
 }
+
+
+export type InterviewStatus = 'draft' | 'published';
+
+export interface Interview {
+  id: string;
+  title: string;
+  description: string;
+  youtubeUrl: string;
+  youtubeVideoId: string;
+  status: InterviewStatus;
+  publishAt: Date;
+  authorId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}

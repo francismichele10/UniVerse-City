@@ -7,6 +7,7 @@ import { watchAdminAuth, isEmailAdmin, signOutAdmin } from '@/lib/adminAuth';
 
 const nav = [
   { href: '/admin', label: 'Posts' },
+  { href: '/admin/interviews', label: 'Interviews' },
   { href: '/admin/analytics', label: 'Analytics' },
   { href: '/admin/comments', label: 'Comments' },
   { href: '/admin/settings', label: 'Settings' },

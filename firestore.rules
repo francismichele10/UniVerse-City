@@ -13,6 +13,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /interviews/{interviewId} {
+      // Visitors can only read published interviews. Admins can manage drafts too.
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /posts/{postId} {
       // Public users can only read posts marked as published.
       // The application additionally filters out posts whose
