@@ -17,9 +17,7 @@ export const metadata: Metadata = {
 
   description: SITE_DESCRIPTION,
 
-  alternates: {
-    canonical: '/',
-  },
+  // Canonical URLs should be defined by individual pages where needed.
 
   openGraph: {
     type: 'website',
