@@ -1,4 +1,4 @@
-# The Young Voice — Student Blog
+UniVerse-City — Student Blog
 
 A complete Next.js (App Router) + Firebase project: a public blog with
 sections, and a Google-auth-gated admin panel for a single admin.
