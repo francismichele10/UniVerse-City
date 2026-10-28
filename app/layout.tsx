@@ -1,18 +1,21 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 
 const SITE_URL = 'https://universecityhub.com';
 
+const SITE_DESCRIPTION =
+  'UniVerse-City is a student publication featuring student news, stories, ideas, academics, sports, arts and culture, and technology.';
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
 
   title: {
-    default: 'UniVerse-City',
+    default: 'UniVerse-City | Student News, Stories & Interviews',
     template: '%s | UniVerse-City',
   },
 
-  description:
-    'UniVerse-City is a student publication featuring student news, stories, ideas, academics, sports, arts and culture, and technology.',
+  description: SITE_DESCRIPTION,
 
   alternates: {
     canonical: '/',
@@ -22,16 +25,14 @@ export const metadata: Metadata = {
     type: 'website',
     url: SITE_URL,
     siteName: 'UniVerse-City',
-    title: 'UniVerse-City',
-    description:
-      'UniVerse-City is a student publication featuring student news, stories, ideas, academics, sports, arts and culture, and technology.',
+    title: 'UniVerse-City | Student News, Stories & Interviews',
+    description: SITE_DESCRIPTION,
   },
 
   twitter: {
     card: 'summary_large_image',
-    title: 'UniVerse-City',
-    description:
-      'UniVerse-City is a student publication featuring student news, stories, ideas, academics, sports, arts and culture, and technology.',
+    title: 'UniVerse-City | Student News, Stories & Interviews',
+    description: SITE_DESCRIPTION,
   },
 
   robots: {
@@ -59,7 +60,6 @@ export default function RootLayout({
           rel="stylesheet"
         />
 
-        {/* Tell search engines the preferred name of the website */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -67,14 +67,16 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'WebSite',
               name: 'UniVerse-City',
-              alternateName: 'universecityhub.com',
+              alternateName: 'UniVerse City',
               url: SITE_URL,
             }),
           }}
         />
       </head>
 
-      <body className="bg-paper text-ink font-sans">{children}</body>
+      <body className="bg-paper text-ink font-sans">
+        {children}
+      </body>
     </html>
   );
 }
