@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
+import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, addDoc, collection } from 'firebase/firestore/lite';
+import { db } from '@/lib/firebase';
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore/lite';
 import {
   COMMUNITY_POST_MAX_LENGTH,
@@ -43,6 +45,8 @@ export function CommunityFeed() {
   const [publishing, setPublishing] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [likedIds, setLikedIds] = useState<string[]>([]);
+  const [busyLikeId, setBusyLikeId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const loadFirstPage = useCallback(async () => {
@@ -53,12 +57,19 @@ export function CommunityFeed() {
       setPosts(result.posts);
       setCursor(result.cursor);
       setHasMore(result.hasMore);
+      if (user) {
+        const liked = await Promise.all(result.posts.map(async (post) => {
+          const snap = await getDoc(doc(db, 'communityPosts', post.id, 'likes', user.uid));
+          return snap.exists() ? post.id : null;
+        }));
+        setLikedIds(liked.filter((id): id is string => Boolean(id)));
+      }
     } catch {
       setError('We couldn’t load the community posts. Please refresh and try again.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const unsubscribe = watchReaderAuth((currentUser) => {
@@ -118,6 +129,38 @@ export function CommunityFeed() {
       setError('Couldn’t load more posts. Please try again.');
     } finally {
       setLoadingMore(false);
+    }
+  }
+
+  async function handleLike(postId: string) {
+    if (!user) { await handleSignIn(); return; }
+    if (busyLikeId) return;
+    setBusyLikeId(postId);
+    const ref = doc(db, 'communityPosts', postId, 'likes', user.uid);
+    const wasLiked = likedIds.includes(postId);
+    setLikedIds((ids) => wasLiked ? ids.filter((id) => id !== postId) : [...ids, postId]);
+    try {
+      if (wasLiked) await deleteDoc(ref);
+      else await setDoc(ref, { uid: user.uid, createdAt: serverTimestamp() });
+    } catch {
+      setLikedIds((ids) => wasLiked ? [...ids, postId] : ids.filter((id) => id !== postId));
+      setError('Your like could not be saved. Please try again.');
+    } finally { setBusyLikeId(null); }
+  }
+
+  async function handleReport(postId: string) {
+    if (!user) { await handleSignIn(); return; }
+    const reason = window.prompt('Briefly tell us why this post should be reviewed (max 500 characters):');
+    if (!reason?.trim()) return;
+    try {
+      await addDoc(collection(db, 'communityPosts', postId, 'reports'), {
+        reporterUid: user.uid, reason: reason.trim().slice(0, 500),
+        status: 'open', createdAt: serverTimestamp(),
+      });
+      setError('');
+      window.alert('Thank you. Your report has been sent to the moderation team.');
+    } catch {
+      setError('Your report could not be submitted. Please try again.');
     }
   }
 
@@ -218,6 +261,14 @@ export function CommunityFeed() {
                       <span className="text-xs text-muted">· {formatRelativeTime(post.createdAt)}</span>
                     </div>
                     <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-7 text-[#343832]">{post.text}</p>
+                    <div className="mt-3 flex items-center gap-5 text-[11px]">
+                      <button type="button" onClick={() => void handleLike(post.id)} disabled={busyLikeId === post.id}
+                        aria-pressed={likedIds.includes(post.id)}
+                        className={likedIds.includes(post.id) ? 'font-semibold text-[#a34f54]' : 'text-[#77766f] hover:text-[#a34f54]'}>
+                        {likedIds.includes(post.id) ? '♥ Liked' : '♡ Like'}
+                      </button>
+                      {user?.uid !== post.authorUid && <button type="button" onClick={() => void handleReport(post.id)} className="text-[#77766f] hover:text-[#a34f54]">Report</button>}
+                    </div>
                     {user?.uid === post.authorUid && (
                       <button
                         type="button"
