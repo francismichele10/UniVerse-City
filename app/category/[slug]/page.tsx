@@ -43,13 +43,6 @@ export async function generateMetadata({
   };
 }
 
-export async function generateStaticParams() {
-  const settings = await getSettings();
-
-  return settings.categories.map((category) => ({
-    slug: toSlug(category),
-  }));
-}
 
 export default async function CategoryPage({
   params,
