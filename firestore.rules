@@ -36,6 +36,38 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    match /communityPosts/{postId} {
+      // Community posts are public to read once published.
+      allow read: if resource.data.status == 'published' || isAdmin();
+
+      // Readers must be signed in with the same Google/Firebase account used
+      // for article comments and likes. Posts are text-only and limited to 280 chars.
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly([
+          'text', 'authorUid', 'authorName', 'authorPhotoURL', 'status', 'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'text', 'authorUid', 'authorName', 'authorPhotoURL', 'status', 'createdAt'
+        ])
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.authorName is string
+        && request.resource.data.authorName.size() > 0
+        && request.resource.data.authorName.size() <= 100
+        && (request.resource.data.authorPhotoURL == null
+          || request.resource.data.authorPhotoURL is string)
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 280
+        && request.resource.data.status == 'published'
+        && request.resource.data.createdAt is timestamp;
+
+      allow delete: if request.auth != null
+        && (resource.data.authorUid == request.auth.uid || isAdmin());
+
+      // Posts are immutable after publishing in this first release.
+      allow update: if false;
+    }
+
     match /media/{mediaId} {
       allow read: if true;
       allow write: if isAdmin();
