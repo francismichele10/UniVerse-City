@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { getCommentsForPost, addComment, deleteComment, editComment, toggleCommentLike, getCommentLikeState } from '@/lib/comments';
 import { signInReader, watchReaderAuth } from '@/lib/readerAuth';
@@ -44,7 +45,7 @@ export function Comments({ postId, postSlug, postTitle }: { postId: string; post
 
   const roots=useMemo(()=>comments.filter(c=>!c.parentId||!comments.some(p=>p.id===c.parentId)),[comments]);
   const children=(id:string)=>comments.filter(c=>c.parentId===id);
-  function renderComment(c:Comment,depth=0):React.ReactNode{
+  function renderComment(c:Comment,depth=0):ReactNode{
     return <div key={c.id} className={depth?'ml-7 mt-4 border-l-2 border-[#e8e0d3] pl-4':''}>
       <div className="flex gap-3"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-rule bg-paper-raised text-xs font-semibold text-navy">{initialsFor(c.authorName)}</div><div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2 text-sm"><span className="font-semibold text-ink">{profiles[c.authorUid]?.displayName||c.authorName}</span>{profiles[c.authorUid]?.verified&&<VerificationBadge/>}<span className="text-xs text-muted">@{profiles[c.authorUid]?.username||''}</span><span className="text-xs text-muted">{formatRelativeTime(c.createdAt)}{c.editedAt?' · edited':''}</span></div>
