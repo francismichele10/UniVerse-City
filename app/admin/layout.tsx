@@ -10,6 +10,7 @@ const nav = [
   { href: '/admin', label: 'Posts', icon: '▤', detail: 'Publication' },
   { href: '/admin/interviews', label: 'Interviews', icon: '◫', detail: 'Conversations' },
   { href: '/admin/community', label: 'Community', icon: '◎', detail: 'Student conversations' },
+  { href: '/admin/reports', label: 'Reported content', icon: '⚑', detail: 'Safety review' },
   { href: '/admin/restrictions', label: 'Account restrictions', icon: '⊘', detail: 'Access control' },
   { href: '/admin/moderation', label: 'Moderation history', icon: '◷', detail: 'Staff actions' },
   { href: '/admin/analytics', label: 'Analytics', icon: '▥', detail: 'Audience' },
