@@ -1,4 +1,4 @@
-import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore/lite';
+import { doc, getDoc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore/lite';
 import { db } from '@/lib/firebase';
 
 export type CommunityProfile = { uid: string; displayName: string; username: string; photoURL: string | null; verified: boolean; createdAt?: unknown; updatedAt?: unknown };
@@ -30,4 +30,11 @@ export async function createCommunityProfile(uid: string, displayName: string, u
     transaction.set(usernameRef, { uid, username: values.username, createdAt: serverTimestamp() });
     transaction.set(profileRef, { uid, ...values, photoURL: photoURL || null, verified: false, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   });
+}
+
+export async function refreshCommunityPhoto(uid: string, photoURL: string | null) {
+  const profile = await getCommunityProfile(uid);
+  if (!profile || profile.photoURL === (photoURL || null)) return profile;
+  await updateDoc(doc(db, 'communityProfiles', uid), { photoURL: photoURL || null, updatedAt: serverTimestamp() });
+  return { ...profile, photoURL: photoURL || null };
 }
