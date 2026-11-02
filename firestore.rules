@@ -40,6 +40,7 @@ service cloud.firestore {
         && request.resource.data.username.matches('^[a-z0-9_]{3,20}$')
         && (request.resource.data.photoURL is string || request.resource.data.photoURL == null)
         && request.resource.data.verified == false
+        && getAfter(/databases/$(database)/documents/communityUsernames/$(request.resource.data.username)).data.uid == uid
         && request.resource.data.createdAt is timestamp
         && request.resource.data.updatedAt is timestamp;
       allow update: if isAdmin()
@@ -55,7 +56,8 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.username == username
         && username.matches('^[a-z0-9_]{3,20}$')
-        && request.resource.data.createdAt is timestamp;
+        && request.resource.data.createdAt is timestamp
+        && getAfter(/databases/$(database)/documents/communityProfiles/$(request.auth.uid)).data.username == username;
       allow update, delete: if isAdmin();
     }
 
