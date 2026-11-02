@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getSettings } from '@/lib/settings';
 import { Masthead } from '@/lib/Masthead';
-import { CommunityFeed } from '@/lib/CommunityFeed';
+import { CommunityGate } from '@/lib/CommunityGate';
 import CopyrightNotice from '@/components/CopyrightNotice';
 
 export const metadata: Metadata = {
@@ -28,7 +28,7 @@ export default async function CommunityPage() {
           </p>
         </div>
       </div>
-      <CommunityFeed />
+      <CommunityGate />
       <CopyrightNotice />
     </main>
   );
