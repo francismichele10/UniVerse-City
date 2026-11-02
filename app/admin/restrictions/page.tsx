@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 import {
   collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, setDoc, Timestamp, addDoc,
 } from 'firebase/firestore/lite';
@@ -64,7 +65,7 @@ export default function AdminRestrictionsPage() {
     return items.filter((item) => !term || [item.uid, item.reason, item.updatedBy].some((value) => String(value || '').toLowerCase().includes(term)));
   }, [items, search]);
 
-  async function applyRestriction(event: React.FormEvent<HTMLFormElement>) {
+  async function applyRestriction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const targetUid = uid.trim();
     const note = reason.trim();
