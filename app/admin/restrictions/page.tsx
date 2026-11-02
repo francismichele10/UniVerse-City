@@ -77,7 +77,7 @@ export default function AdminRestrictionsPage() {
         : Timestamp.fromDate(new Date(Date.now() + Number(duration) * 24 * 60 * 60 * 1000));
       const record: Restriction = {
         uid: targetUid, reason: note, mode, active: true, expiresAt,
-        updatedAt: serverTimestamp() as Timestamp, updatedBy: adminEmail,
+        updatedAt: serverTimestamp() as unknown as Timestamp, updatedBy: adminEmail,
       };
       await setDoc(doc(db, 'accountRestrictions', targetUid), record);
       setUid(''); setReason('');
