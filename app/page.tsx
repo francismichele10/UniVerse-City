@@ -26,6 +26,34 @@ export default async function HomePage() {
       <main>
         <Masthead settings={settings} />
 
+        {/* Community discovery banner */}
+        <section className="border-b border-rule bg-[#faf9f6]">
+          <div className="mx-auto max-w-6xl px-5 py-5 sm:px-8 sm:py-6">
+            <Reveal>
+              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                <div className="max-w-2xl">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brass">
+                    UniVerse-City Community
+                  </p>
+                  <p className="mt-1 font-serif text-xl leading-snug tracking-[-0.02em] text-ink sm:text-2xl">
+                    Your campus. Your voice. Your conversations.
+                  </p>
+                  <p className="mt-1.5 text-sm leading-6 text-muted">
+                    Join the conversation, discover what students are talking about, and share your perspective.
+                  </p>
+                </div>
+
+                <Link
+                  href="/community"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 bg-[#8b6536] px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition-colors duration-200 hover:bg-[#73522c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8b6536]"
+                >
+                  Explore Community <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
         <div className="mx-auto max-w-6xl px-5 sm:px-8">
           {/* Popular */}
           <section className="py-7 sm:py-9">
