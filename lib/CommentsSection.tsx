@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from 'firebase/auth';
+import Link from 'next/link';
 import { getCommentsForPost, addComment, deleteComment, editComment, toggleCommentLike, getCommentLikeState } from '@/lib/comments';
 import { signInReader, watchReaderAuth } from '@/lib/readerAuth';
 import { formatRelativeTime } from '@/lib/date';
@@ -48,7 +49,7 @@ export function Comments({ postId, postSlug, postTitle }: { postId: string; post
   function renderComment(c:Comment,depth=0):ReactNode{
     return <div key={c.id} className={depth?'ml-7 mt-4 border-l-2 border-[#e8e0d3] pl-4':''}>
       <div className="flex gap-3"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-rule bg-paper-raised text-xs font-semibold text-navy">{initialsFor(c.authorName)}</div><div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2 text-sm"><span className="font-semibold text-ink">{profiles[c.authorUid]?.displayName||c.authorName}</span>{profiles[c.authorUid]?.verified&&<VerificationBadge/>}<span className="text-xs text-muted">@{profiles[c.authorUid]?.username||''}</span><span className="text-xs text-muted">{formatRelativeTime(c.createdAt)}{c.editedAt?' · edited':''}</span></div>
+        <div className="flex flex-wrap items-center gap-2 text-sm"><span className="font-semibold text-ink">{profiles[c.authorUid]?.displayName||c.authorName}</span>{profiles[c.authorUid]?.verified&&<VerificationBadge/>}{profiles[c.authorUid]?.username&&<Link href={'/community/u/'+profiles[c.authorUid].username} className="text-xs text-muted hover:underline">@{profiles[c.authorUid].username}</Link>}<span className="text-xs text-muted">{formatRelativeTime(c.createdAt)}{c.editedAt?' · edited':''}</span></div>
         {editingId===c.id?<div className="mt-2"><textarea value={editText} onChange={e=>setEditText(e.target.value)} maxLength={1000} rows={3} className="w-full rounded border border-rule bg-paper-raised p-2 text-sm"/><div className="mt-2 flex gap-3"><button onClick={()=>void saveEdit(c.id)} className="text-xs font-semibold underline">Save edit</button><button onClick={()=>setEditingId(null)} className="text-xs text-muted">Cancel</button></div></div>:<p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-[#2b2f2c]">{c.text}</p>}
         <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted"><button onClick={()=>void handleLike(c.id)} className={likedIds.includes(c.id)?'font-semibold text-[#a34f54]':''}>{likedIds.includes(c.id)?'♥ Liked':'♡ Like'}</button>{depth<2&&<button onClick={()=>{setReplyTo(c.id);setText('');}} className="hover:text-ink">Reply</button>}{user?.uid===c.authorUid&&<button onClick={()=>{setEditingId(c.id);setEditText(c.text);}} className="hover:text-ink">Edit</button>}{user?.uid===c.authorUid&&<button onClick={()=>void handleDelete(c.id)} disabled={deletingId===c.id} className="text-red-700 disabled:opacity-50">{deletingId===c.id?'Deleting…':'Delete'}</button>}</div>
       </div></div>
