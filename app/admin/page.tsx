@@ -3,12 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { isEmailAdmin } from '@/lib/adminAuth';
 import { getAllPostsForAdmin, deletePost, setPostStatus } from '@/lib/posts';
 import { auth } from '@/lib/firebaseAuth';
 import { formatDate } from '@/lib/date';
 import type { Post } from '@/lib/types';
-
-const ADMIN_EMAILS = ['francismichele90@gmail.com','gwendolynansong490@gmail.com','kwesicodes@gmail.com','ohemaamercy416@gmail.com','selbybenardo@gmail.com'];
 
 function StatusLabel({ status }: { status: Post['status'] }) {
   const style = status === 'published'
@@ -36,7 +35,7 @@ export default function AdminDashboard() {
 
   useEffect(() => onAuthStateChanged(auth, async (currentUser) => {
     setUser(currentUser); setAuthReady(true);
-    if (!currentUser?.email || !ADMIN_EMAILS.includes(currentUser.email.toLowerCase().trim())) {
+    if (!currentUser?.email || !(await isEmailAdmin(currentUser.email))) {
       setLoading(false); setError('You must be signed in as an administrator.'); return;
     }
     await loadPosts();
