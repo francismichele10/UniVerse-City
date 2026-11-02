@@ -4,6 +4,8 @@ import { doc, getDoc } from 'firebase/firestore/lite';
 import { db } from '@/lib/firebase';
 import { VerificationBadge } from '@/lib/VerificationBadge';
 
+export const dynamic = 'force-dynamic';
+
 type Props = { params: Promise<{ username: string }> };
 type StudentProfile = { uid: string; displayName: string; username: string; photoURL: string | null; verified: boolean };
 
