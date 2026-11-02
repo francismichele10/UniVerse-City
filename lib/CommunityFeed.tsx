@@ -14,7 +14,7 @@ import { signInReader, watchReaderAuth } from '@/lib/readerAuth';
 import { formatRelativeTime } from '@/lib/date';
 
 function initials(name: string) {
-  return name.trim().split(/\\s+/).slice(0, 2).map((part) => part[0] || '').join('').toUpperCase() || 'U';
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || '').join('').toUpperCase() || 'U';
 }
 
 function Avatar({ name, photoURL, size = 'normal' }: { name: string; photoURL?: string | null; size?: 'normal' | 'small' }) {
