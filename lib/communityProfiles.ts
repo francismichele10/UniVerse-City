@@ -38,3 +38,19 @@ export async function refreshCommunityPhoto(uid: string, photoURL: string | null
   await updateDoc(doc(db, 'communityProfiles', uid), { photoURL: photoURL || null, updatedAt: serverTimestamp() });
   return { ...profile, photoURL: photoURL || null };
 }
+
+export async function adminUpdateCommunityProfile(uid: string, displayName: string, username: string) {
+  const values = validateProfile(displayName, username);
+  const profileRef = doc(db, 'communityProfiles', uid);
+  const nextUsernameRef = doc(db, 'communityUsernames', values.username);
+  await runTransaction(db, async (transaction) => {
+    const profileSnapshot = await transaction.get(profileRef);
+    if (!profileSnapshot.exists()) throw new Error('Student profile not found.');
+    const oldUsername = String(profileSnapshot.data().username || '');
+    const reserved = await transaction.get(nextUsernameRef);
+    if (reserved.exists() && reserved.data().uid !== uid) throw new Error('That username is already taken.');
+    if (oldUsername && oldUsername !== values.username) transaction.delete(doc(db, 'communityUsernames', oldUsername));
+    transaction.set(nextUsernameRef, { uid, username: values.username, createdAt: serverTimestamp() });
+    transaction.update(profileRef, { ...values, updatedAt: serverTimestamp() });
+  });
+}
