@@ -60,6 +60,40 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    match /communityPosts/{postId}/likes/{uid} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && exists(/databases/$(database)/documents/communityPosts/$(postId))
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.createdAt is timestamp;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow update: if false;
+    }
+
+    match /communityPosts/{postId}/reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if request.auth != null
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() > 0
+        && request.resource.data.reason.size() <= 500
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdAt is timestamp;
+      allow update, delete: if isAdmin();
+    }
+
+    match /moderationLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.actorEmail == request.auth.token.email
+        && request.resource.data.action is string
+        && request.resource.data.targetUid is string
+        && request.resource.data.createdAt is timestamp;
+      allow update, delete: if false;
+    }
+
     match /communityPosts/{postId} {
       // Community posts are public to read once published.
       allow read: if resource.data.status == 'published' || isAdmin();
