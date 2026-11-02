@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
+import Link from 'next/link';
 import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, addDoc, collection } from 'firebase/firestore/lite';
 import { db } from '@/lib/firebase';
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore/lite';
@@ -274,7 +275,7 @@ export function CommunityFeed() {
                   <Avatar name={post.authorName} photoURL={post.authorPhotoURL} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-sm font-semibold text-ink">{profiles[post.authorUid]?.displayName || post.authorName}</span>{profiles[post.authorUid]?.verified && <VerificationBadge className="inline-block h-4 w-4" />}<span className="text-xs text-muted">@{profiles[post.authorUid]?.username || ''}</span>
+                      <span className="text-sm font-semibold text-ink">{profiles[post.authorUid]?.displayName || post.authorName}</span>{profiles[post.authorUid]?.verified && <VerificationBadge className="inline-block h-4 w-4" />}{profiles[post.authorUid]?.username && <Link href={'/community/u/' + profiles[post.authorUid].username} className="text-xs text-muted hover:underline">@{profiles[post.authorUid].username}</Link>}
                       <span className="text-xs text-muted">· {formatRelativeTime(post.createdAt)}</span>
                     </div>
                     <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-7 text-[#343832]">{post.text}</p>
