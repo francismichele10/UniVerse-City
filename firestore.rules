@@ -84,6 +84,10 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    match /{path=**}/reports/{reportId} {
+      allow read: if isAdmin();
+    }
+
     match /moderationLogs/{logId} {
       allow read: if isAdmin();
       allow create: if isAdmin()
