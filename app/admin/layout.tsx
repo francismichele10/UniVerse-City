@@ -11,6 +11,7 @@ const nav = [
   { href: '/admin/interviews', label: 'Interviews', icon: '◫', detail: 'Conversations' },
   { href: '/admin/community', label: 'Community', icon: '◎', detail: 'Student conversations' },
   { href: '/admin/restrictions', label: 'Account restrictions', icon: '⊘', detail: 'Access control' },
+  { href: '/admin/moderation', label: 'Moderation history', icon: '◷', detail: 'Staff actions' },
   { href: '/admin/analytics', label: 'Analytics', icon: '▥', detail: 'Audience' },
   { href: '/admin/comments', label: 'Comments', icon: '▧', detail: 'Moderation' },
   { href: '/admin/settings', label: 'Settings', icon: '⚙', detail: 'Configuration' },
