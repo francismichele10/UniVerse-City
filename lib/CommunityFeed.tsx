@@ -95,8 +95,11 @@ export function CommunityFeed() {
       });
       setText('');
       await loadFirstPage();
-    } catch {
-      setError('Your post couldn’t be published. Please try again.');
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
+      setError(code === 'permission-denied'
+        ? 'Your account currently has a Community posting restriction. If you think this is a mistake, contact the UniVerse-City team.'
+        : 'Your post couldn’t be published. Please try again.');
     } finally {
       setPublishing(false);
     }
