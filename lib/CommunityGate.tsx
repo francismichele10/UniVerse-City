@@ -12,6 +12,6 @@ export function CommunityGate() {
  async function refresh(){if(user){const p=await getCommunityProfile(user.uid);setProfile(p);}}
  if(!checked)return <div className="mx-auto max-w-3xl px-5 py-8 text-sm text-muted">Checking your Community profile…</div>;
  if(user&&!profile)return <div className="mx-auto max-w-3xl px-5 py-8"><CommunityProfileSetup uid={user.uid} displayName={user.displayName||''} photoURL={user.photoURL} onComplete={()=>void refresh()}/></div>;
- if(!user)return <div><CommunityFeed/><div className="mx-auto max-w-6xl px-5 pb-8 text-center"><button disabled={busy} onClick={()=>{setBusy(true);void signInReader().finally(()=>setBusy(false));}} className="rounded-lg bg-[#8b6536] px-5 py-3 text-xs font-semibold text-white">{busy?'Opening Google…':'Sign in to create your Community profile'}</button></div></div>;
+ if(!user)return <CommunityFeed/>;
  return <CommunityFeed/>;
 }
