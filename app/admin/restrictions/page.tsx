@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, setDoc, Timestamp,
+  collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, setDoc, Timestamp, addDoc,
 } from 'firebase/firestore/lite';
 import { db } from '@/lib/firebase';
 import { watchAdminAuth } from '@/lib/adminAuth';
@@ -80,6 +80,10 @@ export default function AdminRestrictionsPage() {
         updatedAt: serverTimestamp() as unknown as Timestamp, updatedBy: adminEmail,
       };
       await setDoc(doc(db, 'accountRestrictions', targetUid), record);
+      await addDoc(collection(db, 'moderationLogs'), {
+        actorEmail: adminEmail, action: 'restriction_applied', targetUid,
+        reason: note, mode, expiresAt, createdAt: serverTimestamp(),
+      });
       setUid(''); setReason('');
       setNotice('Account restriction saved. Firestore rules now enforce it for new posts and comments.');
       await load();
@@ -93,6 +97,10 @@ export default function AdminRestrictionsPage() {
     setError(''); setNotice('');
     try {
       await deleteDoc(doc(db, 'accountRestrictions', item.uid));
+      await addDoc(collection(db, 'moderationLogs'), {
+        actorEmail: adminEmail, action: 'restriction_lifted', targetUid: item.uid,
+        reason: item.reason || 'Restriction lifted', createdAt: serverTimestamp(),
+      });
       setItems((current) => current.filter((entry) => entry.uid !== item.uid));
       setNotice('Restriction lifted. The account can participate again.');
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not lift this restriction.'); }
