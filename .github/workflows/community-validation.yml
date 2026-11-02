@@ -28,6 +28,8 @@ jobs:
           NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "000000000000"
           NEXT_PUBLIC_FIREBASE_APP_ID: "1:000000000000:web:placeholder"
       - name: Install ephemeral Firestore rules test tools
-        run: npm install --no-save @firebase/rules-unit-testing firebase-tools
+        run: npm install --no-save @firebase/rules-unit-testing@3.0.4 firebase-tools
+      - name: Configure Firestore emulator
+        run: printf '%s\n' '{"firestore":{"rules":"firestore.rules"},"emulators":{"firestore":{"port":8080},"ui":{"enabled":false}}}' > firebase.json
       - name: Test Firestore security rules in emulator
         run: npx firebase emulators:exec --only firestore --project demo-universe-city "node --test tests/firestore.rules.test.mjs"
