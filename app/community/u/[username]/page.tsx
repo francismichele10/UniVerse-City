@@ -5,14 +5,16 @@ import { db } from '@/lib/firebase';
 import { VerificationBadge } from '@/lib/VerificationBadge';
 
 type Props = { params: Promise<{ username: string }> };
-async function findProfile(username: string) {
+type StudentProfile = { uid: string; displayName: string; username: string; photoURL: string | null; verified: boolean };
+
+async function findProfile(username: string): Promise<StudentProfile | null> {
   const key = username.toLowerCase();
   const reservation = await getDoc(doc(db, 'communityUsernames', key));
   if (!reservation.exists()) return null;
   const uid = String(reservation.data().uid || '');
   if (!uid) return null;
   const profile = await getDoc(doc(db, 'communityProfiles', uid));
-  return profile.exists() ? { uid, ...profile.data() } : null;
+  return profile.exists() ? ({ uid, ...profile.data() } as StudentProfile) : null;
 }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params;
