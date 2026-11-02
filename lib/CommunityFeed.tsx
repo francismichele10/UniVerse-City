@@ -14,6 +14,8 @@ import {
 } from '@/lib/community';
 import { signInReader, watchReaderAuth } from '@/lib/readerAuth';
 import { formatRelativeTime } from '@/lib/date';
+import { getCommunityProfile, type CommunityProfile } from '@/lib/communityProfiles';
+import { VerificationBadge } from '@/lib/VerificationBadge';
 
 function initials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || '').join('').toUpperCase() || 'U';
@@ -48,6 +50,8 @@ export function CommunityFeed() {
   const [likedIds, setLikedIds] = useState<string[]>([]);
   const [busyLikeId, setBusyLikeId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [profiles, setProfiles] = useState<Record<string, CommunityProfile>>({});
+  const [ownProfile, setOwnProfile] = useState<CommunityProfile | null>(null);
 
   const loadFirstPage = useCallback(async () => {
     setLoading(true);
@@ -75,6 +79,8 @@ export function CommunityFeed() {
     const unsubscribe = watchReaderAuth((currentUser) => {
       setUser(currentUser);
       setAuthChecked(true);
+      if (currentUser) getCommunityProfile(currentUser.uid).then(setOwnProfile).catch(() => setOwnProfile(null));
+      else setOwnProfile(null);
     });
     loadFirstPage();
     return () => unsubscribe();
@@ -93,7 +99,7 @@ export function CommunityFeed() {
   }
 
   async function handlePublish() {
-    if (!user || !text.trim() || publishing) return;
+    if (!user || !ownProfile || !text.trim() || publishing) return;
     setPublishing(true);
     setError('');
 
@@ -101,8 +107,8 @@ export function CommunityFeed() {
       await publishCommunityPost({
         text,
         authorUid: user.uid,
-        authorName: user.displayName || user.email || 'UniVerse-City reader',
-        authorPhotoURL: user.photoURL,
+        authorName: ownProfile.displayName,
+        authorPhotoURL: ownProfile.photoURL,
       });
       setText('');
       await loadFirstPage();
@@ -115,6 +121,16 @@ export function CommunityFeed() {
       setPublishing(false);
     }
   }
+
+  useEffect(() => {
+    let active = true;
+    const ids = Array.from(new Set(posts.map(post => post.authorUid))).filter(uid => !profiles[uid]);
+    if (ids.length) Promise.all(ids.map(async uid => [uid, await getCommunityProfile(uid)] as const)).then(rows => {
+      if (!active) return;
+      setProfiles(current => { const next = { ...current }; rows.forEach(([uid, profile]) => { if (profile) next[uid] = profile; }); return next; });
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [posts, profiles]);
 
   async function handleLoadMore() {
     if (!cursor || loadingMore) return;
@@ -187,7 +203,8 @@ export function CommunityFeed() {
           <p className="mt-2 text-sm leading-6 text-muted">What’s happening on campus? What’s on your mind? Start here.</p>
         </div>
 
-        {authChecked && user ? (
+        {authChecked && user && !ownProfile ? <p className="mb-6 rounded-xl border border-rule bg-white p-4 text-sm text-muted">Loading your Community profile…</p> : null}
+        {authChecked && user && ownProfile ? (
           <div className="mb-7 rounded-xl border border-rule bg-white p-4 shadow-sm sm:p-5">
             <div className="flex gap-3">
               <Avatar name={user.displayName || user.email || 'You'} photoURL={user.photoURL} />
@@ -209,7 +226,7 @@ export function CommunityFeed() {
                   <button
                     type="button"
                     onClick={handlePublish}
-                    disabled={publishing || !text.trim()}
+                    disabled={publishing || !text.trim() || !ownProfile}
                     className="rounded-lg bg-[#8b6536] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#73522c] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {publishing ? 'Publishing…' : 'Post'}
@@ -257,7 +274,7 @@ export function CommunityFeed() {
                   <Avatar name={post.authorName} photoURL={post.authorPhotoURL} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-sm font-semibold text-ink">{post.authorName}</span>
+                      <span className="text-sm font-semibold text-ink">{profiles[post.authorUid]?.displayName || post.authorName}</span>{profiles[post.authorUid]?.verified && <VerificationBadge className="inline-block h-4 w-4" />}<span className="text-xs text-muted">@{profiles[post.authorUid]?.username || ''}</span>
                       <span className="text-xs text-muted">· {formatRelativeTime(post.createdAt)}</span>
                     </div>
                     <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-7 text-[#343832]">{post.text}</p>
