@@ -75,13 +75,19 @@ service cloud.firestore {
     match /communityPosts/{postId}/reports/{reportId} {
       allow read: if isAdmin();
       allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['reporterUid', 'reason', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAll(['reporterUid', 'reason', 'status', 'createdAt'])
         && request.resource.data.reporterUid == request.auth.uid
         && request.resource.data.reason is string
         && request.resource.data.reason.size() > 0
         && request.resource.data.reason.size() <= 500
         && request.resource.data.status == 'open'
         && request.resource.data.createdAt is timestamp;
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && resource.data.status == 'open'
+        && request.resource.data.status == 'reviewed';
+      allow delete: if isAdmin();
     }
 
     match /{path=**}/reports/{reportId} {
@@ -157,10 +163,27 @@ service cloud.firestore {
 
       allow create: if request.auth != null
                      && canCreateComment()
+                     && request.resource.data.keys().hasOnly([
+                       'postId', 'postSlug', 'postTitle', 'authorUid',
+                       'authorName', 'authorPhotoURL', 'text', 'createdAt'
+                     ])
+                     && request.resource.data.keys().hasAll([
+                       'postId', 'postSlug', 'postTitle', 'authorUid',
+                       'authorName', 'authorPhotoURL', 'text', 'createdAt'
+                     ])
                      && request.resource.data.authorUid == request.auth.uid
+                     && request.resource.data.authorName is string
+                     && request.resource.data.authorName.size() > 0
+                     && request.resource.data.authorName.size() <= 100
+                     && (request.resource.data.authorPhotoURL == null
+                       || request.resource.data.authorPhotoURL is string)
+                     && request.resource.data.postId is string
+                     && request.resource.data.postSlug is string
+                     && request.resource.data.postTitle is string
                      && request.resource.data.text is string
                      && request.resource.data.text.size() > 0
-                     && request.resource.data.text.size() <= 1000;
+                     && request.resource.data.text.size() <= 1000
+                     && request.resource.data.createdAt is timestamp;
 
       allow delete: if request.auth != null
                      && (
