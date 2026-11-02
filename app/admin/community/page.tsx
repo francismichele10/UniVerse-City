@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  collection, deleteDoc, doc, getDocs, limit, orderBy, query, startAfter, updateDoc,
+  addDoc, collection, deleteDoc, doc, getDocs, limit, orderBy, query, serverTimestamp, startAfter, updateDoc,
   type DocumentData, type QueryDocumentSnapshot,
 } from 'firebase/firestore/lite';
 import { db } from '@/lib/firebase';
+import { auth } from '@/lib/firebaseAuth';
 
 type CommunityPost = {
   id: string;
@@ -75,6 +76,13 @@ export default function AdminCommunityPage() {
     setBusyId(post.id); setError('');
     try {
       await updateDoc(doc(db, 'communityPosts', post.id), { status: next });
+      await addDoc(collection(db, 'moderationLogs'), {
+        actorEmail: auth.currentUser?.email || '',
+        action: next === 'hidden' ? 'community_post_hidden' : 'community_post_restored',
+        targetUid: post.authorUid,
+        reason: `Community post ${post.id}`,
+        createdAt: serverTimestamp(),
+      });
       setPosts((current) => current.map((item) => item.id === post.id ? { ...item, status: next } : item));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update this post.');
@@ -86,6 +94,13 @@ export default function AdminCommunityPage() {
     setBusyId(post.id); setError('');
     try {
       await deleteDoc(doc(db, 'communityPosts', post.id));
+      await addDoc(collection(db, 'moderationLogs'), {
+        actorEmail: auth.currentUser?.email || '',
+        action: 'community_post_deleted',
+        targetUid: post.authorUid,
+        reason: `Community post ${post.id} permanently deleted`,
+        createdAt: serverTimestamp(),
+      });
       setPosts((current) => current.filter((item) => item.id !== post.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not delete this post.');
