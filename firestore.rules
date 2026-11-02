@@ -197,7 +197,7 @@ service cloud.firestore {
                      && canCreateComment()
                      && request.resource.data.keys().hasOnly([
                        'postId', 'postSlug', 'postTitle', 'authorUid',
-                       'authorName', 'authorPhotoURL', 'text', 'createdAt'
+                       'authorName', 'authorPhotoURL', 'text', 'createdAt', 'parentId'
                      ])
                      && request.resource.data.keys().hasAll([
                        'postId', 'postSlug', 'postTitle', 'authorUid',
@@ -215,7 +215,8 @@ service cloud.firestore {
                      && request.resource.data.text is string
                      && request.resource.data.text.size() > 0
                      && request.resource.data.text.size() <= 1000
-                     && request.resource.data.createdAt is timestamp;
+                     && request.resource.data.createdAt is timestamp
+                     && (!('parentId' in request.resource.data) || request.resource.data.parentId == null || request.resource.data.parentId is string);
 
       allow delete: if request.auth != null
                      && (
@@ -223,6 +224,22 @@ service cloud.firestore {
                        || isAdmin()
                      );
 
+      allow update: if request.auth != null
+        && resource.data.authorUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 1000
+        && request.resource.data.editedAt is timestamp;
+    }
+
+    match /comments/{commentId}/likes/{uid} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.createdAt is timestamp;
+      allow delete: if request.auth != null && request.auth.uid == uid;
       allow update: if false;
     }
   }
