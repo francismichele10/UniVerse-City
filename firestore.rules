@@ -146,6 +146,9 @@ service cloud.firestore {
       // for article comments and likes. Posts are text-only and limited to 280 chars.
       allow create: if request.auth != null
         && canCreateCommunityPost()
+        && exists(/databases/$(database)/documents/communityProfiles/$(request.auth.uid))
+        && request.resource.data.authorName == get(/databases/$(database)/documents/communityProfiles/$(request.auth.uid)).data.displayName
+        && request.resource.data.authorPhotoURL == get(/databases/$(database)/documents/communityProfiles/$(request.auth.uid)).data.photoURL
         && request.resource.data.keys().hasOnly([
           'text', 'authorUid', 'authorName', 'authorPhotoURL', 'status', 'createdAt'
         ])
