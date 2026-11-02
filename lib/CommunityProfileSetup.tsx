@@ -1,0 +1,8 @@
+'use client';
+import { useState } from 'react';
+import { createCommunityProfile } from '@/lib/communityProfiles';
+export function CommunityProfileSetup({ uid, displayName, photoURL, onComplete }: { uid: string; displayName: string; photoURL: string | null; onComplete: () => void }) {
+ const [name,setName]=useState(displayName); const [username,setUsername]=useState(''); const [busy,setBusy]=useState(false); const [error,setError]=useState('');
+ async function submit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(''); try { await createCommunityProfile(uid,name,username,photoURL); onComplete(); } catch(e) { setError(e instanceof Error ? e.message : 'Could not create profile.'); } finally { setBusy(false); } }
+ return <form onSubmit={submit} className="mb-6 grid gap-3 rounded-xl border border-rule bg-white p-5 sm:grid-cols-2"><h3 className="font-serif text-xl sm:col-span-2">Set up your Community profile</h3><label className="text-xs">Display name<input required minLength={2} maxLength={60} value={name} onChange={e=>setName(e.target.value)} className="mt-1 w-full rounded border p-2"/></label><label className="text-xs">Unique username<input required minLength={3} maxLength={20} pattern="[a-z0-9_]{3,20}" value={username} onChange={e=>setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,''))} className="mt-1 w-full rounded border p-2"/></label>{error && <p className="text-sm text-red-700 sm:col-span-2">{error}</p>}<button disabled={busy} className="rounded bg-[#8b6536] px-4 py-2 text-white sm:col-span-2">{busy ? 'Saving…' : 'Create profile'}</button></form>;
+}
