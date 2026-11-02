@@ -64,8 +64,11 @@ service cloud.firestore {
       allow delete: if request.auth != null
         && (resource.data.authorUid == request.auth.uid || isAdmin());
 
-      // Posts are immutable after publishing in this first release.
-      allow update: if false;
+      // Only administrators may change moderation status. Authors cannot
+      // rewrite identity, timestamps or content after publication.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['published', 'hidden'];
     }
 
     match /media/{mediaId} {
