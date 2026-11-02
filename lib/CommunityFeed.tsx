@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
+import Link from 'next/link';
+import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, addDoc, collection } from 'firebase/firestore/lite';
+import { db } from '@/lib/firebase';
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore/lite';
 import {
   COMMUNITY_POST_MAX_LENGTH,
@@ -12,6 +15,8 @@ import {
 } from '@/lib/community';
 import { signInReader, watchReaderAuth } from '@/lib/readerAuth';
 import { formatRelativeTime } from '@/lib/date';
+import { getCommunityProfile, type CommunityProfile } from '@/lib/communityProfiles';
+import { VerificationBadge } from '@/lib/VerificationBadge';
 
 function initials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || '').join('').toUpperCase() || 'U';
@@ -43,7 +48,11 @@ export function CommunityFeed() {
   const [publishing, setPublishing] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [likedIds, setLikedIds] = useState<string[]>([]);
+  const [busyLikeId, setBusyLikeId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [profiles, setProfiles] = useState<Record<string, CommunityProfile>>({});
+  const [ownProfile, setOwnProfile] = useState<CommunityProfile | null>(null);
 
   const loadFirstPage = useCallback(async () => {
     setLoading(true);
@@ -53,17 +62,26 @@ export function CommunityFeed() {
       setPosts(result.posts);
       setCursor(result.cursor);
       setHasMore(result.hasMore);
+      if (user) {
+        const liked = await Promise.all(result.posts.map(async (post) => {
+          const snap = await getDoc(doc(db, 'communityPosts', post.id, 'likes', user.uid));
+          return snap.exists() ? post.id : null;
+        }));
+        setLikedIds(liked.filter((id): id is string => Boolean(id)));
+      }
     } catch {
       setError('We couldn’t load the community posts. Please refresh and try again.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const unsubscribe = watchReaderAuth((currentUser) => {
       setUser(currentUser);
       setAuthChecked(true);
+      if (currentUser) getCommunityProfile(currentUser.uid).then(setOwnProfile).catch(() => setOwnProfile(null));
+      else setOwnProfile(null);
     });
     loadFirstPage();
     return () => unsubscribe();
@@ -82,7 +100,7 @@ export function CommunityFeed() {
   }
 
   async function handlePublish() {
-    if (!user || !text.trim() || publishing) return;
+    if (!user || !ownProfile || !text.trim() || publishing) return;
     setPublishing(true);
     setError('');
 
@@ -90,17 +108,30 @@ export function CommunityFeed() {
       await publishCommunityPost({
         text,
         authorUid: user.uid,
-        authorName: user.displayName || user.email || 'UniVerse-City reader',
-        authorPhotoURL: user.photoURL,
+        authorName: ownProfile.displayName,
+        authorPhotoURL: ownProfile.photoURL,
       });
       setText('');
       await loadFirstPage();
-    } catch {
-      setError('Your post couldn’t be published. Please try again.');
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
+      setError(code === 'permission-denied'
+        ? 'Your account currently has a Community posting restriction. If you think this is a mistake, contact the UniVerse-City team.'
+        : 'Your post couldn’t be published. Please try again.');
     } finally {
       setPublishing(false);
     }
   }
+
+  useEffect(() => {
+    let active = true;
+    const ids = Array.from(new Set(posts.map(post => post.authorUid))).filter(uid => !profiles[uid]);
+    if (ids.length) Promise.all(ids.map(async uid => [uid, await getCommunityProfile(uid)] as const)).then(rows => {
+      if (!active) return;
+      setProfiles(current => { const next = { ...current }; rows.forEach(([uid, profile]) => { if (profile) next[uid] = profile; }); return next; });
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [posts, profiles]);
 
   async function handleLoadMore() {
     if (!cursor || loadingMore) return;
@@ -115,6 +146,38 @@ export function CommunityFeed() {
       setError('Couldn’t load more posts. Please try again.');
     } finally {
       setLoadingMore(false);
+    }
+  }
+
+  async function handleLike(postId: string) {
+    if (!user) { await handleSignIn(); return; }
+    if (busyLikeId) return;
+    setBusyLikeId(postId);
+    const ref = doc(db, 'communityPosts', postId, 'likes', user.uid);
+    const wasLiked = likedIds.includes(postId);
+    setLikedIds((ids) => wasLiked ? ids.filter((id) => id !== postId) : [...ids, postId]);
+    try {
+      if (wasLiked) await deleteDoc(ref);
+      else await setDoc(ref, { uid: user.uid, createdAt: serverTimestamp() });
+    } catch {
+      setLikedIds((ids) => wasLiked ? [...ids, postId] : ids.filter((id) => id !== postId));
+      setError('Your like could not be saved. Please try again.');
+    } finally { setBusyLikeId(null); }
+  }
+
+  async function handleReport(postId: string) {
+    if (!user) { await handleSignIn(); return; }
+    const reason = window.prompt('Briefly tell us why this post should be reviewed (max 500 characters):');
+    if (!reason?.trim()) return;
+    try {
+      await addDoc(collection(db, 'communityPosts', postId, 'reports'), {
+        reporterUid: user.uid, reason: reason.trim().slice(0, 500),
+        status: 'open', createdAt: serverTimestamp(),
+      });
+      setError('');
+      window.alert('Thank you. Your report has been sent to the moderation team.');
+    } catch {
+      setError('Your report could not be submitted. Please try again.');
     }
   }
 
@@ -141,7 +204,8 @@ export function CommunityFeed() {
           <p className="mt-2 text-sm leading-6 text-muted">What’s happening on campus? What’s on your mind? Start here.</p>
         </div>
 
-        {authChecked && user ? (
+        {authChecked && user && !ownProfile ? <p className="mb-6 rounded-xl border border-rule bg-white p-4 text-sm text-muted">Loading your Community profile…</p> : null}
+        {authChecked && user && ownProfile ? (
           <div className="mb-7 rounded-xl border border-rule bg-white p-4 shadow-sm sm:p-5">
             <div className="flex gap-3">
               <Avatar name={user.displayName || user.email || 'You'} photoURL={user.photoURL} />
@@ -163,7 +227,7 @@ export function CommunityFeed() {
                   <button
                     type="button"
                     onClick={handlePublish}
-                    disabled={publishing || !text.trim()}
+                    disabled={publishing || !text.trim() || !ownProfile}
                     className="rounded-lg bg-[#8b6536] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#73522c] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {publishing ? 'Publishing…' : 'Post'}
@@ -211,10 +275,18 @@ export function CommunityFeed() {
                   <Avatar name={post.authorName} photoURL={post.authorPhotoURL} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-sm font-semibold text-ink">{post.authorName}</span>
+                      <span className="text-sm font-semibold text-ink">{profiles[post.authorUid]?.displayName || post.authorName}</span>{profiles[post.authorUid]?.verified && <VerificationBadge className="inline-block h-4 w-4" />}{profiles[post.authorUid]?.username && <Link href={'/community/u/' + profiles[post.authorUid].username} className="text-xs text-muted hover:underline">@{profiles[post.authorUid].username}</Link>}
                       <span className="text-xs text-muted">· {formatRelativeTime(post.createdAt)}</span>
                     </div>
                     <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-7 text-[#343832]">{post.text}</p>
+                    <div className="mt-3 flex items-center gap-5 text-[11px]">
+                      <button type="button" onClick={() => void handleLike(post.id)} disabled={busyLikeId === post.id}
+                        aria-pressed={likedIds.includes(post.id)}
+                        className={likedIds.includes(post.id) ? 'font-semibold text-[#a34f54]' : 'text-[#77766f] hover:text-[#a34f54]'}>
+                        {likedIds.includes(post.id) ? '♥ Liked' : '♡ Like'}
+                      </button>
+                      {user?.uid !== post.authorUid && <button type="button" onClick={() => void handleReport(post.id)} className="text-[#77766f] hover:text-[#a34f54]">Report</button>}
+                    </div>
                     {user?.uid === post.authorUid && (
                       <button
                         type="button"

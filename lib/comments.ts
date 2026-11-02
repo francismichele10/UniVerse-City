@@ -1,6 +1,6 @@
 import {
   collection, doc, getDocs, addDoc, deleteDoc,
-  query, where, orderBy, serverTimestamp,
+  query, where, orderBy, serverTimestamp, updateDoc, setDoc, getDoc,
 } from 'firebase/firestore/lite';
 import { db } from './firebase';
 import type { Comment } from './types';
@@ -23,8 +23,9 @@ export async function addComment(data: {
   authorName: string;
   authorPhotoURL: string | null;
   text: string;
+  parentId?: string | null;
 }) {
-  return addDoc(commentsRef, { ...data, createdAt: serverTimestamp() });
+  return addDoc(commentsRef, { ...data, parentId: data.parentId || null, createdAt: serverTimestamp() });
 }
 
 // Used both by "delete my own comment" (reader) and admin moderation —
@@ -39,4 +40,22 @@ export async function getAllCommentsForAdmin(): Promise<Comment[]> {
   const q = query(commentsRef, orderBy('createdAt', 'desc'));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Comment));
+}
+
+export async function editComment(id: string, text: string) {
+  const clean = text.trim();
+  if (!clean || clean.length > 1000) throw new Error('Comment must be between 1 and 1000 characters.');
+  return updateDoc(doc(db, 'comments', id), { text: clean, editedAt: serverTimestamp() });
+}
+
+export async function toggleCommentLike(id: string, uid: string) {
+  const likeRef = doc(db, 'comments', id, 'likes', uid);
+  const existing = await getDoc(likeRef);
+  if (existing.exists()) return deleteDoc(likeRef);
+  return setDoc(likeRef, { uid, createdAt: serverTimestamp() });
+}
+
+export async function getCommentLikeState(id: string, uid: string) {
+  const snap = await getDoc(doc(db, 'comments', id, 'likes', uid));
+  return snap.exists();
 }

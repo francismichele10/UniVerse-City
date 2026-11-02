@@ -41,6 +41,8 @@ export interface Comment {
   authorName: string;
   authorPhotoURL: string | null;
   text: string;
+  parentId?: string | null;
+  editedAt?: Date;
   createdAt: Date;
 }
 
