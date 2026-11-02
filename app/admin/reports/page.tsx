@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { collectionGroup, doc, getDocs, limit, orderBy, query, updateDoc } from 'firebase/firestore/lite';
+import { addDoc, collection, collectionGroup, doc, getDocs, limit, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore/lite';
 import { db } from '@/lib/firebase';
+import { auth } from '@/lib/firebaseAuth';
 
 type Report = { id: string; reporterUid?: string; reason?: string; status?: string; createdAt?: { toDate?: () => Date } | null; postId: string };
 
@@ -28,6 +29,13 @@ export default function AdminReportsPage() {
   async function resolve(report: Report) {
     try {
       await updateDoc(doc(db, 'communityPosts', report.postId, 'reports', report.id), { status: 'reviewed' });
+      await addDoc(collection(db, 'moderationLogs'), {
+        actorEmail: auth.currentUser?.email || '',
+        action: 'report_reviewed',
+        targetUid: report.reporterUid || 'unknown',
+        reason: `Reviewed report on Community post ${report.postId}: ${report.reason || 'No reason supplied'}`,
+        createdAt: serverTimestamp(),
+      });
       setItems((current) => current.map((item) => item.id === report.id ? { ...item, status: 'reviewed' } : item));
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not update this report.'); }
   }
