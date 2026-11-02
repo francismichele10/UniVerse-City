@@ -16,7 +16,7 @@ export default async function CommunityPage() {
 
   return (
     <main>
-      <Masthead settings={settings} />
+      <Masthead settings={settings} currentPage="community" />
       <div className="border-b border-rule bg-[#faf9f6]">
         <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brass">UniVerse-City Community</p>
