@@ -8,6 +8,30 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
     }
 
+    function hasActiveRestriction(uid) {
+      return exists(/databases/$(database)/documents/accountRestrictions/$(uid))
+        && get(/databases/$(database)/documents/accountRestrictions/$(uid)).data.active == true
+        && (
+          get(/databases/$(database)/documents/accountRestrictions/$(uid)).data.expiresAt == null
+          || get(/databases/$(database)/documents/accountRestrictions/$(uid)).data.expiresAt > request.time
+        );
+    }
+
+    function canCreateCommunityPost() {
+      return !hasActiveRestriction(request.auth.uid)
+        || get(/databases/$(database)/documents/accountRestrictions/$(request.auth.uid)).data.mode == 'comment';
+    }
+
+    function canCreateComment() {
+      return !hasActiveRestriction(request.auth.uid)
+        || get(/databases/$(database)/documents/accountRestrictions/$(request.auth.uid)).data.mode == 'post';
+    }
+
+    match /accountRestrictions/{uid} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+      allow create, update, delete: if isAdmin();
+    }
+
     match /admins/{email} {
       allow read: if isAdmin();
       allow write: if false;
@@ -43,6 +67,7 @@ service cloud.firestore {
       // Readers must be signed in with the same Google/Firebase account used
       // for article comments and likes. Posts are text-only and limited to 280 chars.
       allow create: if request.auth != null
+        && canCreateCommunityPost()
         && request.resource.data.keys().hasOnly([
           'text', 'authorUid', 'authorName', 'authorPhotoURL', 'status', 'createdAt'
         ])
@@ -93,6 +118,7 @@ service cloud.firestore {
       allow read: if true;
 
       allow create: if request.auth != null
+                     && canCreateComment()
                      && request.resource.data.authorUid == request.auth.uid
                      && request.resource.data.text is string
                      && request.resource.data.text.size() > 0
