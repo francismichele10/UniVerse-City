@@ -40,6 +40,7 @@ export function Comments({
   useEffect(() => {
     getCommentsForPost(postId)
       .then(setComments)
+      .catch(() => setError('Comments could not be loaded. Please refresh and try again.'))
       .finally(() => setLoading(false));
   }, [postId]);
 
@@ -59,8 +60,11 @@ export function Comments({
       });
       setText('');
       setComments(await getCommentsForPost(postId));
-    } catch {
-      setError('Could not post your comment — try again.');
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
+      setError(code === 'permission-denied'
+        ? 'Your account currently has a Community commenting restriction. If you think this is a mistake, contact the UniVerse-City team.'
+        : 'Could not post your comment — please try again.');
     } finally {
       setPosting(false);
     }
@@ -73,7 +77,7 @@ export function Comments({
       await deleteComment(id);
       setComments((prev) => prev.filter((c) => c.id !== id));
     } catch {
-      setError('Could not delete that comment — try again.');
+      setError('Could not delete that comment — please try again.');
     } finally {
       setDeletingId(null);
     }
