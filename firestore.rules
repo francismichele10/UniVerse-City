@@ -81,7 +81,7 @@ service cloud.firestore {
           && request.resource.data.status in ['approved', 'rejected']
         ) || (
           request.auth != null && request.auth.uid == uid
-          && resource.data.status == 'rejected'
+          && resource.data.status in ['rejected', 'approved']
           && request.resource.data.uid == uid
           && request.resource.data.mode == 'full'
           && request.resource.data.status == 'pending'
