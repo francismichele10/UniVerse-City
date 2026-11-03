@@ -64,9 +64,9 @@ export function CommunityGate() {
          setAppealSubmitted(true);
          return;
        }
-       if(existing.status!=='rejected') {
+       if(existing.status!=='rejected' && existing.status!=='approved') {
          setAppeal(existing);
-         setAppealError('This appeal has already been reviewed and cannot be resubmitted right now.');
+         setAppealError('Your appeal is already awaiting review.');
          return;
        }
        await updateDoc(appealRef,{
