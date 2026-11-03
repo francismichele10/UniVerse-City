@@ -65,6 +65,22 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Administrators may create and read immutable moderation audit entries.
+    // Students cannot write to this collection, and no client can alter old logs.
+    match /moderationLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['actorEmail', 'action', 'targetUid', 'reason', 'mode', 'createdAt'])
+        && request.resource.data.keys().hasAll(['actorEmail', 'action', 'targetUid', 'createdAt'])
+        && request.resource.data.actorEmail is string
+        && request.resource.data.action is string
+        && request.resource.data.targetUid is string
+        && (!('reason' in request.resource.data) || request.resource.data.reason is string)
+        && (!('mode' in request.resource.data) || request.resource.data.mode is string)
+        && request.resource.data.createdAt is timestamp;
+      allow update, delete: if false;
+    }
+
     match /admins/{email} {
       allow read: if isAdmin();
       allow write: if false;
