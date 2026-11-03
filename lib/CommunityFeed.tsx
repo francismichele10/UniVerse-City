@@ -298,7 +298,7 @@ export function CommunityFeed() {
               </div>
 
               <p className="mt-4 whitespace-pre-wrap break-words text-[16px] leading-[1.65] text-[#30251b] sm:text-[17px]">{post.text}</p>
-              {post.editedAt && <span className="mt-2 inline-block text-[11px] italic text-[#978b7a]">Edited</span>}
+              {Boolean(post.editedAt) && <span className="mt-2 inline-block text-[11px] italic text-[#978b7a]">Edited</span>}
 
               <div className="mt-5 flex items-center justify-between border-t border-[#eee3d3] pt-3">
                 <button type="button" onClick={() => void handleLike(post.id)} disabled={busyLikeId === post.id} aria-pressed={likedIds.includes(post.id)}
