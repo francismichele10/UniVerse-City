@@ -1,35 +1,29 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getSettings } from '@/lib/settings';
-import { Masthead } from '@/lib/Masthead';
 import { CommunityGate } from '@/lib/CommunityGate';
-import CopyrightNotice from '@/components/CopyrightNotice';
 
 export const metadata: Metadata = {
-  title: 'Community',
+  title: 'Community | UniVerse-City',
   description: 'Join student conversations, share ideas and talk about campus life on UniVerse-City.',
 };
 
 export const dynamic = 'force-dynamic';
 
-export default async function CommunityPage() {
-  const settings = await getSettings();
-
+export default function CommunityPage() {
   return (
-    <main>
-      <Masthead settings={settings} currentPage="community" />
-      <div className="border-b border-rule bg-[#faf9f6]">
-        <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brass">UniVerse-City Community</p>
-          <h1 className="mt-2 max-w-3xl font-serif text-3xl leading-tight tracking-[-0.035em] text-ink sm:text-5xl">
-            Your place to talk about student life.
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
-            From campus happenings to everyday questions, this is where student conversations live.
-          </p>
+    <main className="min-h-screen bg-[#faf9f6]">
+      <header className="sticky top-0 z-40 border-b border-rule bg-[#fffdf9]/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-8">
+          <Link href="/" aria-label="Back to UniVerse-City homepage" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#725331] transition hover:bg-[#eee8dc]">
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6M9 12h11"/></svg>
+          </Link>
+          <div className="min-w-0">
+            <p className="font-serif text-lg font-semibold tracking-[-0.02em] text-ink sm:text-xl">UniVerse-City</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">Community</p>
+          </div>
         </div>
-      </div>
+      </header>
       <CommunityGate />
-      <CopyrightNotice />
     </main>
   );
 }
