@@ -5,7 +5,7 @@ import type { User } from 'firebase/auth';
 import Link from 'next/link';
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query,
-  serverTimestamp, setDoc, where,
+  serverTimestamp, setDoc, updateDoc, where,
 } from 'firebase/firestore/lite';
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore/lite';
 import { db } from '@/lib/firebase';
@@ -52,6 +52,12 @@ export function CommunityFeed() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [text, setText] = useState('');
   const [composerOpen, setComposerOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<CommunityPost | null>(null);
+  const [openPostMenu, setOpenPostMenu] = useState<string | null>(null);
+  const [reportingPost, setReportingPost] = useState<CommunityPost | null>(null);
+  const [reportReason, setReportReason] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [notice, setNotice] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -171,16 +177,31 @@ export function CommunityFeed() {
     } finally { setBusyLikeId(null); }
   }
 
-  async function handleReport(postId: string) {
+  async function handleReport() {
     if (!user) { await handleSignIn(); return; }
-    const reason = window.prompt('Briefly tell us why this post should be reviewed (max 500 characters):');
-    if (!reason?.trim()) return;
+    if (!reportingPost || !reportReason.trim() || submittingReport) return;
+    setSubmittingReport(true); setError('');
     try {
-      await addDoc(collection(db, 'communityPosts', postId, 'reports'), {
-        reporterUid: user.uid, reason: reason.trim().slice(0, 500), status: 'open', createdAt: serverTimestamp(),
+      await addDoc(collection(db, 'communityPosts', reportingPost.id, 'reports'), {
+        reporterUid: user.uid, reason: reportReason.trim().slice(0, 500), status: 'open', createdAt: serverTimestamp(),
       });
-      window.alert('Thank you. Your report has been sent to the moderation team.');
+      setReportingPost(null); setReportReason('');
+      setNotice('Thank you. This content has been sent to the administrators for review.');
     } catch { setError('Your report could not be submitted. Please try again.'); }
+    finally { setSubmittingReport(false); }
+  }
+
+  async function handleEditPost() {
+    if (!user || !editingPost || !text.trim() || publishing) return;
+    const updatedText = text.trim();
+    setPublishing(true); setError('');
+    try {
+      await updateDoc(doc(db, 'communityPosts', editingPost.id), { text: updatedText, editedAt: serverTimestamp() });
+      setPosts(current => current.map(post => post.id === editingPost.id ? { ...post, text: updatedText, editedAt: new Date() } : post));
+      setComposerOpen(false); setEditingPost(null); setText('');
+      setNotice('Your post has been updated.');
+    } catch { setError('Your post could not be edited. Please try again.'); }
+    finally { setPublishing(false); }
   }
 
   async function handleDelete(postId: string) {
@@ -248,6 +269,7 @@ export function CommunityFeed() {
           {authChecked && user && !ownProfile && <p className="px-2 pt-3 text-center text-xs text-[#8a7d6b]">Loading your Community profile…</p>}
         </section>
 
+        {notice && <p role="status" className="mb-4 rounded-xl border border-[#d8c7aa] bg-[#f6efdf] px-4 py-3 text-sm text-[#65491f]">{notice}<button type="button" onClick={() => setNotice('')} className="ml-2 font-semibold underline">Dismiss</button></p>}
         {error && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
         {loading ? <div className="rounded-[24px] border border-[#eadfce] bg-[#fffaf2] py-14 text-center text-sm text-[#81786c]">Loading conversations…</div>
@@ -264,13 +286,19 @@ export function CommunityFeed() {
                     <span className="text-[13px] text-[#978b7a]">· {formatRelativeTime(post.createdAt)}</span>
                   </div>
                 </div>
-                <button type="button" onClick={() => {
-                  if (user?.uid === post.authorUid) void handleDelete(post.id);
-                  else void handleReport(post.id);
-                }} aria-label={user?.uid === post.authorUid ? 'Delete post' : 'Report post'} className="rounded-full px-2 py-1 text-xl leading-none text-[#70502c] transition hover:bg-[#f3eadb]">···</button>
+                <div className="relative">
+                  <button type="button" onClick={() => setOpenPostMenu(current => current === post.id ? null : post.id)} aria-label="Post options" aria-expanded={openPostMenu === post.id} className="rounded-full px-2 py-1 text-xl leading-none text-[#70502c] transition hover:bg-[#f3eadb]">···</button>
+                  {openPostMenu === post.id && <div className="absolute right-0 top-9 z-20 min-w-36 overflow-hidden rounded-xl border border-[#eadfce] bg-[#fffdf9] py-1 shadow-xl">
+                    {user?.uid === post.authorUid ? <>
+                      <button type="button" onClick={() => { setEditingPost(post); setText(post.text); setComposerOpen(true); setOpenPostMenu(null); }} className="block w-full px-4 py-2.5 text-left text-sm text-[#49351f] hover:bg-[#f7efe3]">Edit post</button>
+                      <button type="button" onClick={() => { setOpenPostMenu(null); void handleDelete(post.id); }} className="block w-full px-4 py-2.5 text-left text-sm text-[#9b4b42] hover:bg-[#fbefec]">Delete post</button>
+                    </> : <button type="button" onClick={() => { if (!user) { setOpenPostMenu(null); void handleSignIn(); return; } setReportingPost(post); setReportReason(''); setOpenPostMenu(null); }} className="block w-full px-4 py-2.5 text-left text-sm text-[#9b4b42] hover:bg-[#fbefec]">Report</button>}
+                  </div>}
+                </div>
               </div>
 
               <p className="mt-4 whitespace-pre-wrap break-words text-[16px] leading-[1.65] text-[#30251b] sm:text-[17px]">{post.text}</p>
+              {post.editedAt && <span className="mt-2 inline-block text-[11px] italic text-[#978b7a]">Edited</span>}
 
               <div className="mt-5 flex items-center justify-between border-t border-[#eee3d3] pt-3">
                 <button type="button" onClick={() => void handleLike(post.id)} disabled={busyLikeId === post.id} aria-pressed={likedIds.includes(post.id)}
@@ -304,8 +332,18 @@ export function CommunityFeed() {
 
       {composerOpen && <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#211b13]/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" onMouseDown={event => { if (event.target === event.currentTarget) setComposerOpen(false); }}>
         <section role="dialog" aria-modal="true" aria-labelledby="compose-title" className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-[#e5ddce] bg-[#fffdf9] shadow-2xl sm:max-w-xl sm:rounded-2xl">
-          <div className="flex items-center justify-between border-b border-rule px-4 py-4 sm:px-6"><button onClick={() => setComposerOpen(false)} className="text-sm text-muted">Cancel</button><h2 id="compose-title" className="font-serif text-lg text-ink">Create a post</h2><button onClick={() => void handlePublish()} disabled={!text.trim() || publishing} className="rounded-lg bg-[#8b6536] px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">{publishing ? 'Posting…' : 'Post'}</button></div>
+          <div className="flex items-center justify-between border-b border-rule px-4 py-4 sm:px-6"><button onClick={() => { setComposerOpen(false); setEditingPost(null); setText(''); }} className="text-sm text-muted">Cancel</button><h2 id="compose-title" className="font-serif text-lg text-ink">{editingPost ? 'Edit your post' : 'Create a post'}</h2><button onClick={() => void (editingPost ? handleEditPost() : handlePublish())} disabled={!text.trim() || publishing} className="rounded-lg bg-[#8b6536] px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">{publishing ? 'Saving…' : editingPost ? 'Save changes' : 'Post'}</button></div>
           <div className="flex min-h-0 flex-1 gap-3 overflow-y-auto p-4 sm:p-6"><Avatar name={ownProfile?.displayName || 'You'} photoURL={ownProfile?.photoURL}/><div className="min-w-0 flex-1"><textarea autoFocus value={text} onChange={event => setText(event.target.value.slice(0, COMMUNITY_POST_MAX_LENGTH))} maxLength={COMMUNITY_POST_MAX_LENGTH} placeholder="What’s happening in your student community?" className="min-h-[180px] w-full resize-none bg-transparent text-base leading-7 text-ink outline-none placeholder:text-[#a09a8e] sm:min-h-[240px] sm:text-lg"/><div className="border-t border-rule pt-3 text-right text-xs text-muted">{text.length}/{COMMUNITY_POST_MAX_LENGTH}</div></div></div>
+        </section>
+      </div>}
+
+      {reportingPost && <div className="fixed inset-0 z-[95] flex items-end justify-center bg-[#211b13]/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-5">
+        <section role="dialog" aria-modal="true" aria-labelledby="report-title" className="w-full rounded-t-2xl border border-[#e5ddce] bg-[#fffdf9] p-5 shadow-2xl sm:max-w-lg sm:rounded-2xl">
+          <div className="flex items-center justify-between"><h2 id="report-title" className="font-serif text-xl text-[#3e2b19]">Report this post</h2><button type="button" onClick={() => setReportingPost(null)} aria-label="Close report form" className="text-2xl text-[#857969]">×</button></div>
+          <p className="mt-2 text-sm leading-6 text-[#81786c]">Tell the administrators why you think this content should be reviewed.</p>
+          <textarea autoFocus value={reportReason} onChange={event => setReportReason(event.target.value.slice(0, 500))} maxLength={500} rows={5} placeholder="Enter your reason for reporting…" className="mt-4 w-full resize-y rounded-xl border border-[#eadfce] bg-white p-3 text-sm leading-6 text-[#30251b] outline-none focus:border-[#a9813f]"/>
+          <div className="mt-1 flex items-center justify-between text-xs text-[#978b7a]"><span>Please provide a clear reason.</span><span>{reportReason.length}/500</span></div>
+          <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setReportingPost(null)} className="rounded-full px-4 py-2.5 text-sm text-[#76501f] hover:bg-[#f7efe3]">Cancel</button><button type="button" onClick={() => void handleReport()} disabled={!reportReason.trim() || submittingReport} className="rounded-full bg-[#76501f] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">{submittingReport ? 'Sending…' : 'Report'}</button></div>
         </section>
       </div>}
 
