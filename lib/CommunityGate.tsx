@@ -55,9 +55,18 @@ export function CommunityGate() {
      const message=appealText.trim().slice(0,1500);
      if(current.exists()) {
        const existing=current.data() as Appeal;
+       if(existing.status==='pending') {
+         // The appeal is already safely recorded; show the same confirmation
+         // instead of treating a repeat click or earlier successful save as an error.
+         setAppeal(existing);
+         setAppealText('');
+         setAppealError('');
+         setAppealSubmitted(true);
+         return;
+       }
        if(existing.status!=='rejected') {
          setAppeal(existing);
-         setAppealError('An appeal is already on record and cannot be resubmitted right now.');
+         setAppealError('This appeal has already been reviewed and cannot be resubmitted right now.');
          return;
        }
        await updateDoc(appealRef,{
