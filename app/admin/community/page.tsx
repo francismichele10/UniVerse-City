@@ -73,7 +73,7 @@ export default function AdminCommunityPage() {
       }
     });
     return () => unsubscribe();
-  }, [load]); // Load only after Firebase has resolved the admin session.
+  }, []); // Initial page only; load after Firebase resolves the admin session.
 
   const visiblePosts = useMemo(() => posts.filter((post) => {
     const matchesStatus = filter === 'all' || post.status === filter;
