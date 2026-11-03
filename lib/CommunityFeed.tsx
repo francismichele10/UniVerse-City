@@ -353,6 +353,7 @@ function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn, onC
 }) {
   const [size, setSize] = useState<'half' | 'full'>('half');
   const [comments, setComments] = useState<CommunityComment[]>([]);
+  const [commentProfiles, setCommentProfiles] = useState<Record<string, CommunityProfile>>({});
   const [commentLikes, setCommentLikes] = useState<Record<string, number>>({});
   const [myLikes, setMyLikes] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
@@ -370,6 +371,15 @@ function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn, onC
       const snap = await getDocs(query(collection(db, 'communityPosts', post.id, 'comments'), orderBy('createdAt', 'asc')));
       const rows = snap.docs.map(item => ({ id: item.id, ...item.data() } as CommunityComment));
       setComments(rows);
+      const authorIds = Array.from(new Set(rows.map(item => item.authorUid))).filter(uid => !commentProfiles[uid]);
+      if (authorIds.length) {
+        const profiles = await Promise.all(authorIds.map(async uid => [uid, await getCommunityProfile(uid)] as const));
+        setCommentProfiles(current => {
+          const next = { ...current };
+          profiles.forEach(([uid, profile]) => { if (profile) next[uid] = profile; });
+          return next;
+        });
+      }
       const counts = await Promise.all(rows.map(async item => {
         const likes = await getDocs(collection(db, 'communityPosts', post.id, 'comments', item.id, 'likes'));
         return [item.id, likes.size] as const;
@@ -426,7 +436,7 @@ function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn, onC
       <div className={isReply ? 'flex gap-2 py-1.5' : 'flex gap-2.5 py-2.5'}>
         <Avatar name={comment.authorName} photoURL={comment.authorPhotoURL} size="small"/>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"><span className="break-words text-[13px] font-semibold text-ink">{comment.authorName}</span><span className="text-[10px] text-muted">{formatRelativeTime(comment.createdAt)}</span></div>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"><span className="inline-flex flex-wrap items-center gap-1.5 break-words text-[13px] font-semibold text-ink">{commentProfiles[comment.authorUid]?.displayName || comment.authorName}{commentProfiles[comment.authorUid]?.verified && <VerificationBadge className="inline-block h-3.5 w-3.5"/>}</span><span className="text-[10px] text-muted">{formatRelativeTime(comment.createdAt)}</span></div>
           <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-5 text-[#45443e]">{comment.text}</p>
           <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted">
             {!isReply && <button onClick={() => { setReplyTo(comment); setDraft(''); document.getElementById('community-comment-input')?.focus(); }} className="hover:text-[#8b6536]">Reply</button>}
