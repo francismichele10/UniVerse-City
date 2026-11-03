@@ -61,13 +61,13 @@ export function CommunityGate() {
    <div className={blocked?'pointer-events-none select-none blur-[5px] opacity-50':''} aria-hidden={blocked}>
      <CommunityFeed/>
    </div>
-   {blocked&&<div className="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-[#211b13]/55 px-4 py-8 backdrop-blur-sm">
-     <section role="dialog" aria-modal="true" aria-labelledby="suspension-title" className="my-auto w-full max-w-lg rounded-[26px] border border-[#d9c39d] bg-[#fffdf8] p-6 shadow-2xl sm:p-8">
-       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f5e9e4] text-2xl text-[#985247]">!</div>
-       <p className="mt-5 text-center text-[9px] font-bold uppercase tracking-[.2em] text-[#a17b47]">Community access notice</p>
-       <h1 id="suspension-title" className="mt-2 text-center font-serif text-3xl text-[#38291c]">Your Community access is suspended</h1>
-       <p className="mt-3 text-center text-sm leading-6 text-[#766b5c]">Your account has been temporarily restricted from participating in Community because of a Community Guidelines violation.</p>
-       <div className="mt-5 rounded-2xl border border-[#eadfce] bg-[#faf5eb] p-4">
+   {blocked&&<div className="fixed inset-0 z-[110] flex items-center justify-center overflow-hidden bg-[#211b13]/55 px-3 py-3 backdrop-blur-sm">
+     <section role="dialog" aria-modal="true" aria-labelledby="suspension-title" className="w-full max-w-lg max-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-[26px] border border-[#d9c39d] bg-[#fffdf8] p-4 shadow-2xl sm:p-8">
+       <div className="mx-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5e9e4] text-xl text-[#985247] sm:h-14 sm:w-14 sm:text-2xl">!</div>
+       <p className="mt-3 text-center text-[9px] font-bold uppercase tracking-[.2em] text-[#a17b47] sm:mt-5">Community access notice</p>
+       <h1 id="suspension-title" className="mt-1 text-center font-serif text-2xl text-[#38291c] sm:mt-2 sm:text-3xl">Your Community access is suspended</h1>
+       <p className="mt-2 text-center text-xs leading-5 text-[#766b5c] sm:mt-3 sm:text-sm sm:leading-6">Your account has been temporarily restricted from participating in Community because of a Community Guidelines violation.</p>
+       <div className="mt-3 rounded-2xl border border-[#eadfce] bg-[#faf5eb] p-3 sm:mt-5 sm:p-4">
          <p className="text-[9px] font-bold uppercase tracking-[.14em] text-[#9a7745]">Reason provided</p>
          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#493a2a]">{restriction?.reason||'Please contact the UniVerse-City team for details.'}</p>
          <p className="mt-3 text-xs text-[#81786c]">{restriction?.expiresAt ? 'Restriction ends ' + restriction.expiresAt.toDate().toLocaleString() : 'This restriction has no scheduled expiry.'}</p>
@@ -76,12 +76,12 @@ export function CommunityGate() {
        :appeal?.status==='rejected'?<div className="mt-5 rounded-xl bg-[#f8efec] p-4 text-sm text-[#874b41]">Your previous appeal was not approved. {appeal.decisionNote||''}</div>
        :<div className="mt-5">
          <label htmlFor="restriction-appeal" className="block text-xs font-semibold text-[#55432e]">Would you like to appeal this decision?</label>
-         <textarea id="restriction-appeal" value={appealText} onChange={e=>setAppealText(e.target.value.slice(0,1500))} rows={4} maxLength={1500} placeholder="Explain why you believe this restriction should be reviewed…" className="mt-2 w-full rounded-xl border border-[#e5ddce] bg-white p-3 text-sm text-[#30251b] outline-none focus:border-[#a9813f]"/>
+         <textarea id="restriction-appeal" value={appealText} onChange={e=>setAppealText(e.target.value.slice(0,1500))} rows={3} maxLength={1500} placeholder="Explain why you believe this restriction should be reviewed…" className="mt-2 w-full rounded-xl border border-[#e5ddce] bg-white p-3 text-sm text-[#30251b] outline-none focus:border-[#a9813f]"/>
          <div className="mt-1 flex justify-between text-[10px] text-[#978b7a]"><span>Be respectful and include any helpful context.</span><span>{appealText.length}/1500</span></div>
          {appealError&&<p role="alert" className="mt-3 text-xs text-red-700">{appealError}</p>}
          <button onClick={()=>void submitAppeal()} disabled={!appealText.trim()||submitting} className="mt-4 w-full rounded-full bg-[#76501f] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{submitting?'Submitting…':'Submit appeal'}</button>
        </div>}
-       <p className="mt-5 text-center text-[10px] leading-5 text-[#9a8d7b]">You can still browse the rest of UniVerse-City. Only Community participation is affected.</p>
+       <p 
      </section>
    </div>}
    {welcome&&<div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#f8f3e8]/95 px-6 text-center"><div className="rounded-2xl border border-[#c9ad7d] bg-[#fffdf8] px-8 py-10 shadow-xl animate-[welcomeFade_2.6s_ease-in-out_forwards]"><p className="font-serif text-3xl leading-tight text-[#4b3925] sm:text-4xl">Welcome to UniVerse-City Community<span className="inline-block animate-bounce">!</span></p><p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9b7849]">Your conversation starts here</p></div></div>}
