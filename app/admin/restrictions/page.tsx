@@ -109,6 +109,9 @@ export default function AdminRestrictionsPage() {
     setError(''); setNotice('');
     try {
       await deleteDoc(doc(db, 'accountRestrictions', item.uid));
+      await setDoc(doc(db, 'restrictionWelcomeBack', item.uid), {
+        eventId: crypto.randomUUID(), seenEventId: null, createdAt: serverTimestamp(),
+      });
       await addDoc(collection(db, 'moderationLogs'), {
         actorEmail: adminEmail, action: 'restriction_lifted', targetUid: item.uid,
         reason: item.reason || 'Restriction lifted', createdAt: serverTimestamp(),
@@ -131,6 +134,9 @@ export default function AdminRestrictionsPage() {
       });
       if (decision === 'approved') {
         await deleteDoc(doc(db, 'accountRestrictions', item.uid));
+        await setDoc(doc(db, 'restrictionWelcomeBack', item.uid), {
+          eventId: crypto.randomUUID(), seenEventId: null, createdAt: serverTimestamp(),
+        });
         await addDoc(collection(db, 'moderationLogs'), {
           actorEmail: adminEmail, action: 'restriction_appeal_approved', targetUid: item.uid,
           reason: item.reason || 'Appeal approved', createdAt: serverTimestamp(),
