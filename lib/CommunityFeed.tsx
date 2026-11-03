@@ -206,8 +206,6 @@ export function CommunityFeed() {
           <p className="mt-2 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#77736b]">Community</p>
           <nav className="mt-9 space-y-2 text-sm">
             <Link href="/community" className="flex items-center gap-4 rounded-xl bg-[#bd9258]/[0.13] px-4 py-3.5 font-semibold text-[#e0b879]"><span className="text-lg">⌂</span> Home</Link>
-            <Link href="/community" className="flex items-center gap-4 rounded-xl px-4 py-3.5 text-[#aaa69f] transition hover:bg-white/[0.05] hover:text-white"><span className="text-lg">⌕</span> Explore</Link>
-            <Link href="/community" className="flex items-center gap-4 rounded-xl px-4 py-3.5 text-[#aaa69f] transition hover:bg-white/[0.05] hover:text-white"><span className="text-lg">♧</span> Community</Link>
             {user && <Link href={ownProfile?.username ? '/community/u/' + ownProfile.username : '/community'} className="flex items-center gap-4 rounded-xl px-4 py-3.5 text-[#aaa69f] transition hover:bg-white/[0.05] hover:text-white"><span className="text-lg">◎</span> My profile</Link>}
           </nav>
           <div className="mt-auto space-y-4">
@@ -279,7 +277,7 @@ export function CommunityFeed() {
                       <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-7 text-[#d8d4cd]">{post.text}</p>
                       <div className="mt-4 flex items-center gap-6 text-xs">
                         <button type="button" onClick={() => void handleLike(post.id)} disabled={busyLikeId === post.id} aria-pressed={likedIds.includes(post.id)} className={likedIds.includes(post.id) ? 'font-semibold text-rose-400' : 'text-[#8b877f] transition hover:text-rose-400'}>{likedIds.includes(post.id) ? '♥ Liked' : '♡ Like'}</button>
-                        <button type="button" onClick={() => void handleReport(post.id)} className="text-[#8b877f] transition hover:text-[#d2aa73]">Report</button>
+                        {user?.uid !== post.authorUid && <button type="button" onClick={() => void handleReport(post.id)} className="text-[#8b877f] transition hover:text-[#d2aa73]">Report</button>}
                         {user?.uid === post.authorUid && <button type="button" onClick={() => handleDelete(post.id)} disabled={deletingId === post.id} className="ml-auto text-[#8b877f] transition hover:text-red-400">{deletingId === post.id ? 'Deleting…' : 'Delete'}</button>}
                       </div>
                     </div>
@@ -310,8 +308,6 @@ export function CommunityFeed() {
 
       <nav className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-white/[0.09] bg-[#0d0f10]/95 px-3 pb-[max(env(safe-area-inset-bottom),10px)] pt-3 backdrop-blur-xl lg:hidden">
         <Link href="/community" className="flex flex-col items-center gap-1 text-[#d2aa73]"><span className="text-xl">⌂</span><span className="text-[9px]">Home</span></Link>
-        <Link href="/community" className="flex flex-col items-center gap-1 text-[#8b877f]"><span className="text-xl">⌕</span><span className="text-[9px]">Explore</span></Link>
-        <Link href="/community" className="flex flex-col items-center gap-1 text-[#8b877f]"><span className="text-xl">♧</span><span className="text-[9px]">Community</span></Link>
         {user && <Link href={ownProfile?.username ? '/community/u/' + ownProfile.username : '/community'} className="flex flex-col items-center gap-1 text-[#8b877f]"><span className="text-xl">◎</span><span className="text-[9px]">Profile</span></Link>}
         {!user && <button type="button" onClick={handleSignIn} className="flex flex-col items-center gap-1 text-[#8b877f]"><span className="text-xl">↗</span><span className="text-[9px]">Sign in</span></button>}
       </nav>
