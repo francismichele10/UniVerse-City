@@ -351,7 +351,7 @@ function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn, onC
   post: CommunityPost; profile?: CommunityProfile; user: User | null; ownProfile: CommunityProfile | null;
   onClose: () => void; onSignIn: () => Promise<void>; onCommentAdded: () => void;
 }) {
-  const [size, setSize] = useState<'half' | 'full'>('half');
+  const [size] = useState<'full'>('full');
   const [comments, setComments] = useState<CommunityComment[]>([]);
   const [commentProfiles, setCommentProfiles] = useState<Record<string, CommunityProfile>>({});
   const [commentLikes, setCommentLikes] = useState<Record<string, number>>({});
@@ -454,7 +454,7 @@ function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn, onC
   }
 
   return <div className="fixed inset-0 z-[90] flex items-end justify-center bg-[#211b13]/45 backdrop-blur-[2px] sm:items-center sm:p-5" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
-    <section role="dialog" aria-modal="true" aria-label="Comments" style={{ transform: dragOffset ? `translateY(${Math.max(0, dragOffset)}px)` : undefined, transition: isDragging ? 'none' : 'transform 280ms cubic-bezier(.22,1,.36,1), height 280ms cubic-bezier(.22,1,.36,1)' }} className={`flex w-full flex-col overflow-hidden rounded-t-2xl border border-[#e5ddce] bg-[#fffdf9] shadow-2xl will-change-transform sm:max-w-2xl sm:rounded-2xl ${size === 'full' ? 'h-[96dvh] sm:h-[88vh]' : 'h-[62dvh] sm:h-[min(680px,78vh)]'}`}>
+    <section role="dialog" aria-modal="true" aria-label="Comments" style={{ transform: dragOffset ? `translateY(${Math.max(0, dragOffset)}px)` : undefined, transition: isDragging ? 'none' : 'transform 280ms cubic-bezier(.22,1,.36,1), height 280ms cubic-bezier(.22,1,.36,1)' }} className={`flex w-full flex-col overflow-hidden rounded-t-2xl border border-[#e5ddce] bg-[#fffdf9] shadow-2xl will-change-transform sm:max-w-2xl sm:rounded-2xl h-[96dvh] sm:h-[88vh]`}>
       <div className="shrink-0 border-b border-rule">
         <div
           className="flex h-9 touch-none cursor-grab items-center justify-center active:cursor-grabbing sm:hidden"
@@ -463,8 +463,7 @@ function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn, onC
           onPointerUp={event => {
             if (dragStart === null) return;
             const delta = event.clientY - dragStart;
-            if (delta < -45) setSize('full');
-            else if (delta > 90) { if (size === 'full') setSize('half'); else onClose(); }
+            if (delta > 90) onClose();
             setDragStart(null); setDragOffset(0); setIsDragging(false);
           }}
           onPointerCancel={() => { setDragStart(null); setDragOffset(0); setIsDragging(false); }}
@@ -474,7 +473,6 @@ function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn, onC
         <div className="flex items-center justify-between px-4 pb-3 pt-1 sm:px-5 sm:py-4">
           <button onClick={onClose} className="text-sm text-muted sm:hidden">Close</button>
           <h2 className="flex-1 text-center font-serif text-lg text-ink sm:text-left">Comments</h2>
-          <button onClick={() => setSize(current => current === 'half' ? 'full' : 'half')} className="hidden text-xs text-muted hover:text-ink sm:block">{size === 'half' ? 'Expand' : 'Collapse'}</button>
           <button onClick={onClose} aria-label="Close comments" className="hidden text-xl leading-none text-muted sm:block">×</button>
         </div>
       </div>
