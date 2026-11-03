@@ -74,10 +74,23 @@ service cloud.firestore {
         && request.resource.data.message.size() <= 1500
         && request.resource.data.status == 'pending'
         && request.resource.data.createdAt is timestamp;
-      allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decisionNote', 'reviewedBy', 'reviewedAt'])
-        && resource.data.status == 'pending'
-        && request.resource.data.status in ['approved', 'rejected'];
+      allow update: if (
+          isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decisionNote', 'reviewedBy', 'reviewedAt'])
+          && resource.data.status == 'pending'
+          && request.resource.data.status in ['approved', 'rejected']
+        ) || (
+          request.auth != null && request.auth.uid == uid
+          && resource.data.status == 'rejected'
+          && request.resource.data.uid == uid
+          && request.resource.data.mode == 'full'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.message is string
+          && request.resource.data.message.size() > 0
+          && request.resource.data.message.size() <= 1500
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['message', 'status', 'createdAt', 'decisionNote', 'reviewedBy', 'reviewedAt'])
+        );
       allow delete: if isAdmin();
     }
 
