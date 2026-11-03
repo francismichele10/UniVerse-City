@@ -55,8 +55,14 @@ export default function AdminRestrictionsPage() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = watchAdminAuth((user) => setAdminEmail(user?.email || ''));
-    void load();
+    const unsubscribe = watchAdminAuth((user) => {
+      setAdminEmail(user?.email || '');
+      if (user) void load();
+      else {
+        setLoading(false);
+        setError('Sign in with an administrator account to view restrictions.');
+      }
+    });
     return () => unsubscribe();
   }, [load]);
 
