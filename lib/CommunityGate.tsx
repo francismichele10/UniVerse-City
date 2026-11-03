@@ -81,8 +81,7 @@ export function CommunityGate() {
          {appealError&&<p role="alert" className="mt-3 text-xs text-red-700">{appealError}</p>}
          <button onClick={()=>void submitAppeal()} disabled={!appealText.trim()||submitting} className="mt-4 w-full rounded-full bg-[#76501f] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{submitting?'Submitting…':'Submit appeal'}</button>
        </div>}
-       <p 
-     </section>
+      </section>
    </div>}
    {welcome&&<div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#f8f3e8]/95 px-6 text-center"><div className="rounded-2xl border border-[#c9ad7d] bg-[#fffdf8] px-8 py-10 shadow-xl animate-[welcomeFade_2.6s_ease-in-out_forwards]"><p className="font-serif text-3xl leading-tight text-[#4b3925] sm:text-4xl">Welcome to UniVerse-City Community<span className="inline-block animate-bounce">!</span></p><p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9b7849]">Your conversation starts here</p></div></div>}
  </>;
