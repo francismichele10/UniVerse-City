@@ -137,6 +137,22 @@ describe('Community Firestore security rules', () => {
     await assertFails(createComment(db));
   });
 
+  it('allows post owners to edit only their own post text and records an edited timestamp', async () => {
+    const owner = signedIn();
+    await createProfile(owner);
+    const post = await createPost(owner);
+    await assertSucceeds(updateDoc(doc(owner, 'communityPosts', post.id), {
+      text: 'Updated post text', editedAt: serverTimestamp(),
+    }));
+    const other = signedIn('another-student-uid', 'other@example.com');
+    await assertFails(updateDoc(doc(other, 'communityPosts', post.id), {
+      text: 'Changed by someone else', editedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(owner, 'communityPosts', post.id), {
+      status: 'hidden', editedAt: serverTimestamp(),
+    }));
+  });
+
   it('allows owners to delete their posts but prevents another student from doing so', async () => {
     const owner = signedIn();
     await createProfile(owner);
