@@ -6,7 +6,7 @@ import { getCommunityProfile, refreshCommunityPhoto, type CommunityProfile } fro
 import { CommunityProfileSetup } from '@/lib/CommunityProfileSetup';
 import { CommunityFeed } from '@/lib/CommunityFeed';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore/lite';
+import { collection, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore/lite';
 import type { Timestamp } from 'firebase/firestore/lite';
 
 type Restriction = { reason: string; mode: 'full' | 'post' | 'comment'; active: boolean; expiresAt: Timestamp | null };
@@ -44,12 +44,26 @@ export function CommunityGate() {
    if(!user||!restriction||!appealText.trim()||submitting)return;
    setSubmitting(true);setAppealError('');
    try{
-     const current=await getDoc(doc(db,'restrictionAppeals',user.uid));
-     if(current.exists()) { setAppeal(current.data() as Appeal); setAppealError('An appeal has already been submitted for this restriction.'); return; }
-     await setDoc(doc(db,'restrictionAppeals',user.uid),{
-       uid:user.uid, email:user.email||'', reason:restriction.reason, mode:restriction.mode,
-       message:appealText.trim().slice(0,1500), status:'pending', createdAt:serverTimestamp(),
-     });
+     const appealRef=doc(db,'restrictionAppeals',user.uid);
+     const current=await getDoc(appealRef);
+     const message=appealText.trim().slice(0,1500);
+     if(current.exists()) {
+       const existing=current.data() as Appeal;
+       if(existing.status!=='rejected') {
+         setAppeal(existing);
+         setAppealError('An appeal is already on record and cannot be resubmitted right now.');
+         return;
+       }
+       await updateDoc(appealRef,{
+         message, status:'pending', createdAt:serverTimestamp(),
+         decisionNote:deleteField(), reviewedBy:deleteField(), reviewedAt:deleteField(),
+       });
+     } else {
+       await setDoc(appealRef,{
+         uid:user.uid, email:user.email||'', reason:restriction.reason, mode:restriction.mode,
+         message, status:'pending', createdAt:serverTimestamp(),
+       });
+     }
      setAppeal({status:'pending',message:appealText.trim()});setAppealText('');
    }catch(e){setAppealError(e instanceof Error?e.message:'Your appeal could not be submitted. Please try again.');}
    finally{setSubmitting(false);}
@@ -99,8 +113,8 @@ export function CommunityGate() {
          <p className="mt-3 text-xs text-[#81786c]">{restriction?.expiresAt ? 'Restriction ends ' + restriction.expiresAt.toDate().toLocaleString() : 'This restriction has no scheduled expiry.'}</p>
        </div>
        {appeal?.status==='pending'?<p className="mt-5 rounded-xl bg-[#f3efe4] p-4 text-sm text-[#675333]">Your appeal has been submitted and is awaiting administrator review.</p>
-       :appeal?.status==='rejected'?<div className="mt-5 rounded-xl bg-[#f8efec] p-4 text-sm text-[#874b41]">Your previous appeal was not approved. {appeal.decisionNote||''}</div>
        :<div className="mt-5">
+         {appeal?.status==='rejected'&&<div className="mb-4 rounded-xl bg-[#f8efec] p-4 text-sm text-[#874b43]"><p className="font-semibold">Your previous appeal was not approved.</p>{appeal.decisionNote&&<p className="mt-1">{appeal.decisionNote}</p>}<p className="mt-2 text-xs">You may submit a new appeal with additional information for another review.</p></div>}
          <label htmlFor="restriction-appeal" className="block text-xs font-semibold text-[#55432e]">Would you like to appeal this decision?</label>
          <textarea id="restriction-appeal" value={appealText} onChange={e=>setAppealText(e.target.value.slice(0,1500))} rows={3} maxLength={1500} placeholder="Explain why you believe this restriction should be reviewed…" className="mt-2 w-full rounded-xl border border-[#e5ddce] bg-white p-3 text-sm text-[#30251b] outline-none focus:border-[#a9813f]"/>
          <div className="mt-1 flex justify-between text-[10px] text-[#978b7a]"><span>Be respectful and include any helpful context.</span><span>{appealText.length}/1500</span></div>
