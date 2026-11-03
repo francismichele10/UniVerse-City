@@ -52,8 +52,14 @@ export default function AdminRestrictionsPage() {
     try {
       const snapshot = await getDocs(query(collection(db, 'accountRestrictions'), orderBy('updatedAt', 'desc')));
       setItems(snapshot.docs.map((item) => ({ uid: item.id, ...item.data() }) as Restriction));
-      const appealSnapshot = await getDocs(query(collection(db, 'restrictionAppeals'), orderBy('createdAt', 'desc')));
-      setAppeals(appealSnapshot.docs.map(item => ({ uid: item.id, ...item.data() })));
+      const appealSnapshot = await getDocs(collection(db, 'restrictionAppeals'));
+      const appealRecords = appealSnapshot.docs.map(item => ({ uid: item.id, ...item.data() }));
+      appealRecords.sort((a: any, b: any) => {
+        const aTime = a.createdAt?.toMillis?.() || 0;
+        const bTime = b.createdAt?.toMillis?.() || 0;
+        return bTime - aTime;
+      });
+      setAppeals(appealRecords);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load account restrictions.');
     } finally { setLoading(false); setAppealsLoading(false); }
@@ -197,13 +203,14 @@ export default function AdminRestrictionsPage() {
       </form>
 
       <section className="mt-8 overflow-hidden rounded-[22px] border border-[#e7e2d8] bg-[#fbfaf7]">
-        <div className="border-b border-[#ebe6dc] p-5"><h2 className="font-serif text-xl text-[#292e28]">Suspension appeals</h2><p className="mt-1 text-[10px] text-[#96938a]">Review appeals submitted by Community members with full suspensions.</p></div>
-        {appealsLoading ? <p className="p-7 text-sm text-[#77766f]">Loading appeals…</p> : appeals.filter(item => item.status === 'pending').length === 0 ? <p className="p-8 text-center text-sm text-[#89877f]">There are no pending appeals.</p> : <div className="divide-y divide-[#eee9e0]">{appeals.filter(item => item.status === 'pending').map(item => <article key={item.uid} className="p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2"><p className="break-all text-xs font-bold text-[#34372f]">{item.email || item.uid}</p><span className="rounded-full bg-[#f5eddb] px-2.5 py-1 text-[9px] font-bold uppercase text-[#805f2e]">Pending</span></div>
+        <div className="border-b border-[#ebe6dc] p-5"><h2 className="font-serif text-xl text-[#292e28]">Suspension appeals</h2><p className="mt-1 text-[10px] text-[#96938a]">All appeal records, including pending and previously reviewed submissions.</p></div>
+        {appealsLoading ? <p className="p-7 text-sm text-[#77766f]">Loading appeals…</p> : appeals.length === 0 ? <p className="p-8 text-center text-sm text-[#89877f]">There are no appeal records in Firestore.</p> : <div className="divide-y divide-[#eee9e0]">{appeals.map(item => <article key={item.uid} className="p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2"><p className="break-all text-xs font-bold text-[#34372f]">{item.email || item.uid}</p><span className={`rounded-full px-2.5 py-1 text-[9px] font-bold uppercase ${item.status === 'pending' ? 'bg-[#f5eddb] text-[#805f2e]' : item.status === 'approved' ? 'bg-[#edf5ed] text-[#426d48]' : 'bg-[#f8efec] text-[#934c43]'}`}>{item.status || 'Unknown status'}</span></div>
           <p className="mt-3 text-xs font-semibold text-[#765a35]">Original reason: {item.reason || 'Not supplied'}</p>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#575950]">{item.message}</p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#575950]">{item.message || 'No appeal message was saved in this record.'}</p>
+          {item.decisionNote && <p className="mt-2 rounded-lg bg-[#f3efe4] p-3 text-xs text-[#675333]">Review note: {item.decisionNote}</p>}
           <p className="mt-2 text-[10px] text-[#96938a]">User UID: {item.uid}</p>
-          <div className="mt-4 flex flex-wrap gap-2"><button disabled={reviewingAppeal === item.uid} onClick={() => void reviewAppeal(item, 'approved')} className="rounded-full bg-[#314b37] px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide text-white disabled:opacity-50">{reviewingAppeal === item.uid ? 'Saving…' : 'Approve & lift restriction'}</button><button disabled={reviewingAppeal === item.uid} onClick={() => void reviewAppeal(item, 'rejected')} className="rounded-full border border-[#d9c6bd] px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide text-[#934c43] disabled:opacity-50">Reject appeal</button></div>
+          {item.status === 'pending' && <div className="mt-4 flex flex-wrap gap-2"><button disabled={reviewingAppeal === item.uid} onClick={() => void reviewAppeal(item, 'approved')} className="rounded-full bg-[#314b37] px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide text-white disabled:opacity-50">{reviewingAppeal === item.uid ? 'Saving…' : 'Approve & lift restriction'}</button><button disabled={reviewingAppeal === item.uid} onClick={() => void reviewAppeal(item, 'rejected')} className="rounded-full border border-[#d9c6bd] px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide text-[#934c43] disabled:opacity-50">Reject appeal</button></div>}
         </article>)}</div>}
       </section>
 
