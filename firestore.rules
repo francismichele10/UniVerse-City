@@ -60,6 +60,27 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    match /restrictionAppeals/{uid} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+      allow create: if request.auth != null && request.auth.uid == uid
+        && !exists(/databases/$(database)/documents/restrictionAppeals/$(uid))
+        && request.resource.data.keys().hasOnly(['uid', 'email', 'reason', 'mode', 'message', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAll(['uid', 'reason', 'mode', 'message', 'status', 'createdAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.reason is string
+        && request.resource.data.mode == 'full'
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 1500
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt is timestamp;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decisionNote', 'reviewedBy', 'reviewedAt'])
+        && resource.data.status == 'pending'
+        && request.resource.data.status in ['approved', 'rejected'];
+      allow delete: if isAdmin();
+    }
+
     match /accountRestrictions/{uid} {
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
       allow create, update, delete: if isAdmin();
