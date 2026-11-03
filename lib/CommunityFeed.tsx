@@ -210,68 +210,95 @@ export function CommunityFeed() {
     finally { setLoadingMore(false); }
   }
 
+  async function handleShare(post: CommunityPost) {
+    const url = `${window.location.origin}/community#post-${post.id}`;
+    try {
+      if (navigator.share) await navigator.share({ title: 'UniVerse-City Community', text: post.text, url });
+      else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setError('Post link copied. You can now share it.');
+      } else window.prompt('Copy this post link:', url);
+    } catch (err) {
+      if ((err as { name?: string })?.name !== 'AbortError') setError('This post could not be shared right now.');
+    }
+  }
+
   return (
-    <div className="mx-auto grid max-w-6xl gap-8 px-4 pb-24 pt-5 sm:px-8 sm:py-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-12">
-      <section className="min-w-0">
-        <div className="mb-5 border-b border-rule pb-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brass">The student conversation</p>
-          <h2 className="mt-1 font-serif text-2xl tracking-[-0.03em] text-ink sm:text-3xl">Community feed</h2>
-          <p className="mt-1 text-sm leading-6 text-muted">What’s happening on campus? What’s on your mind? Start here.</p>
-        </div>
+    <div className="min-h-screen bg-[#fbf6ec]">
+      <main className="mx-auto max-w-3xl px-4 pb-28 pt-5 sm:px-6 sm:pt-7">
+        <section className="mb-6 rounded-[24px] border border-[#eadfce] bg-[#fffaf2] p-3 shadow-[0_3px_14px_rgba(76,53,25,.06)] sm:p-4">
+          <div className="flex items-center gap-3">
+            <Avatar name={ownProfile?.displayName || user?.displayName || 'UniVerse-City member'} photoURL={ownProfile?.photoURL || user?.photoURL}/>
+            <button type="button" onClick={() => {
+              if (!user) { void handleSignIn(); return; }
+              if (!ownProfile) return;
+              setText(''); setComposerOpen(true);
+            }} className="flex min-h-[54px] min-w-0 flex-1 items-center rounded-full border border-[#eadfce] bg-[#fffdf9] px-5 text-left text-sm text-[#81786c] shadow-inner transition hover:border-[#c9ad7d]">
+              What’s on your mind?
+            </button>
+            <button type="button" onClick={() => {
+              if (!user) { void handleSignIn(); return; }
+              if (!ownProfile) return;
+              setText(''); setComposerOpen(true);
+            }} aria-label="Create a post" className="flex h-[54px] w-[62px] shrink-0 items-center justify-center rounded-[18px] bg-[#76501f] text-[#fffaf0] shadow-sm transition hover:bg-[#5f3f19]">
+              <QuillIcon/>
+            </button>
+          </div>
+          {authChecked && !user && <p className="px-2 pt-3 text-center text-xs text-[#8a7d6b]">Sign in with Google to post, like or comment.</p>}
+          {authChecked && user && !ownProfile && <p className="px-2 pt-3 text-center text-xs text-[#8a7d6b]">Loading your Community profile…</p>}
+        </section>
 
-        {authChecked && user && !ownProfile && <p className="mb-5 rounded-xl border border-rule bg-white p-4 text-sm text-muted">Loading your Community profile…</p>}
-        {authChecked && !user && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rule bg-white p-4">
-          <div><h3 className="font-serif text-lg text-ink">Join the conversation</h3><p className="text-sm text-muted">Sign in with Google when you’re ready to post or comment.</p></div>
-          <button onClick={() => void handleSignIn()} disabled={signingIn} className="rounded-lg bg-[#8b6536] px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-60">{signingIn ? 'Opening Google…' : 'Sign in'}</button>
-        </div>}
-        {error && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+        {error && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-        <div className="mb-3 flex items-center justify-between"><h3 className="font-serif text-lg text-ink">Recent posts</h3><span className="text-[10px] uppercase tracking-[0.14em] text-muted">Latest first</span></div>
-        {loading ? <div className="border-y border-rule py-12 text-center text-sm text-muted">Loading conversations…</div>
-          : posts.length === 0 ? <div className="rounded-xl border border-dashed border-[#d8d0c1] bg-[#faf9f6] px-5 py-12 text-center"><p className="font-serif text-2xl text-ink">It’s quiet in here. For now.</p><p className="mt-2 text-sm leading-6 text-muted">Be the first to start a conversation with other students.</p></div>
-          : <div className="divide-y divide-rule border-y border-rule bg-white">
-            {posts.map(post => <article key={post.id} className="px-3 py-3.5 sm:px-4 sm:py-4">
-              <div className="flex gap-3">
+        {loading ? <div className="rounded-[24px] border border-[#eadfce] bg-[#fffaf2] py-14 text-center text-sm text-[#81786c]">Loading conversations…</div>
+          : posts.length === 0 ? <div className="rounded-[24px] border border-dashed border-[#d8c7aa] bg-[#fffaf2] px-5 py-14 text-center"><p className="font-serif text-2xl text-[#3e2b19]">It’s quiet in here. For now.</p><p className="mt-2 text-sm leading-6 text-[#81786c]">Be the first to start a conversation with other students.</p></div>
+          : <div className="space-y-5">
+            {posts.map(post => <article id={`post-${post.id}`} key={post.id} className="overflow-hidden rounded-[24px] border border-[#eadfce] bg-[#fffdf9] px-4 py-4 shadow-[0_4px_16px_rgba(76,53,25,.07)] sm:px-6 sm:py-5">
+              <div className="flex items-start gap-3">
                 <Avatar name={post.authorName} photoURL={post.authorPhotoURL}/>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 pt-0.5">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="break-words text-sm font-semibold text-ink">{profiles[post.authorUid]?.displayName || post.authorName}</span>
-                    {profiles[post.authorUid]?.verified && <VerificationBadge className="inline-block h-4 w-4 -ml-1"/>}
-                    {profiles[post.authorUid]?.username && <Link href={'/community/u/'+profiles[post.authorUid].username} className="max-w-full break-all text-xs text-muted hover:underline">@{profiles[post.authorUid].username}</Link>}
-                    <span className="text-xs text-muted">· {formatRelativeTime(post.createdAt)}</span>
+                    <span className="break-words text-[15px] font-semibold text-[#302113]">{profiles[post.authorUid]?.displayName || post.authorName}</span>
+                    {profiles[post.authorUid]?.verified && <VerificationBadge className="inline-block h-4 w-4"/>}
+                    {profiles[post.authorUid]?.username && <Link href={'/community/u/'+profiles[post.authorUid].username} className="max-w-full break-all text-[13px] text-[#857969] hover:underline">@{profiles[post.authorUid].username}</Link>}
+                    <span className="text-[13px] text-[#978b7a]">· {formatRelativeTime(post.createdAt)}</span>
                   </div>
-                  <p className="mt-1.5 whitespace-pre-wrap break-words text-[14px] leading-6 text-[#343832]">{post.text}</p>
-                  <div className="mt-3 flex items-center gap-6 text-xs">
-                    <button type="button" onClick={() => void handleLike(post.id)} disabled={busyLikeId === post.id} aria-pressed={likedIds.includes(post.id)}
-                      className={`inline-flex items-center gap-2 transition ${likedIds.includes(post.id) ? 'font-semibold text-[#9b4b52]' : 'text-[#77766f] hover:text-[#9b4b52]'}`}>
-                      <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill={likedIds.includes(post.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7"><path d="M20.8 8.8c0 5.1-8.8 11-8.8 11s-8.8-5.9-8.8-11A4.7 4.7 0 0 1 12 6.2a4.7 4.7 0 0 1 8.8 2.6Z" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      <span className="sr-only">Like</span><span>{likeCounts[post.id] || 0}</span>
-                    </button>
-                    <button type="button" onClick={() => setActivePost(post)} className="inline-flex items-center gap-2 text-[#77766f] transition hover:text-[#8b6536]">
-                      <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M20 11.5a8 8 0 0 1-8 8H5l1.7-3.1A8 8 0 1 1 20 11.5Z" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      <span className="sr-only">Comment</span><span>{commentCounts[post.id] || 0}</span>
-                    </button>
-                  </div>
-                  {user?.uid !== post.authorUid && <button type="button" onClick={() => void handleReport(post.id)} className="mt-2 text-[11px] text-muted hover:text-[#9b4b52]">Report</button>}
-                  {user?.uid === post.authorUid && <button type="button" onClick={() => void handleDelete(post.id)} disabled={deletingId === post.id} className="mt-2 text-[11px] text-muted underline underline-offset-4 hover:text-red-700 disabled:opacity-50">{deletingId === post.id ? 'Deleting…' : 'Delete post'}</button>}
                 </div>
+                <button type="button" onClick={() => {
+                  if (user?.uid === post.authorUid) void handleDelete(post.id);
+                  else void handleReport(post.id);
+                }} aria-label={user?.uid === post.authorUid ? 'Delete post' : 'Report post'} className="rounded-full px-2 py-1 text-xl leading-none text-[#70502c] transition hover:bg-[#f3eadb]">···</button>
               </div>
+
+              <p className="mt-4 whitespace-pre-wrap break-words text-[16px] leading-[1.65] text-[#30251b] sm:text-[17px]">{post.text}</p>
+
+              <div className="mt-5 flex items-center justify-between border-t border-[#eee3d3] pt-3">
+                <button type="button" onClick={() => void handleLike(post.id)} disabled={busyLikeId === post.id} aria-pressed={likedIds.includes(post.id)}
+                  className={`inline-flex min-w-[76px] items-center gap-2 rounded-full px-2 py-1.5 text-sm transition ${likedIds.includes(post.id) ? 'font-semibold text-[#8b4a37]' : 'text-[#76501f] hover:bg-[#f7efe3]'}`}>
+                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill={likedIds.includes(post.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7"><path d="M20.8 8.8c0 5.1-8.8 11-8.8 11s-8.8-5.9-8.8-11A4.7 4.7 0 0 1 12 6.2a4.7 4.7 0 0 1 8.8 2.6Z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <span>{likeCounts[post.id] || 0}</span>
+                </button>
+                <button type="button" onClick={() => setActivePost(post)} className="inline-flex min-w-[76px] items-center gap-2 rounded-full px-2 py-1.5 text-sm text-[#76501f] transition hover:bg-[#f7efe3]">
+                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M20 11.5a8 8 0 0 1-8 8H5l1.7-3.1A8 8 0 1 1 20 11.5Z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <span>{commentCounts[post.id] || 0}</span>
+                </button>
+                <button type="button" onClick={() => void handleShare(post)} aria-label="Share post" className="rounded-full p-2 text-[#76501f] transition hover:bg-[#f7efe3]">
+                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 5l7 7-7 7M21 12H9a6 6 0 0 0-6 6"/></svg>
+                </button>
+              </div>
+              {user?.uid === post.authorUid && deletingId === post.id && <p className="mt-2 text-xs text-[#8a7d6b]">Deleting post…</p>}
             </article>)}
           </div>}
-        {!loading && hasMore && <div className="pt-6 text-center"><button onClick={() => void handleLoadMore()} disabled={loadingMore} className="rounded-lg border border-rule bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink hover:border-[#a9813f] disabled:opacity-60">{loadingMore ? 'Loading…' : 'Load more posts'}</button></div>}
-      </section>
 
-      <aside className="hidden space-y-5 lg:block lg:pt-[70px]">
-        <div className="rounded-xl border border-rule bg-white p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">Find your people</p>
-          <h3 className="mt-2 font-serif text-xl text-ink">Who to follow</h3>
-          <p className="mt-2 text-sm leading-6 text-muted">Discover students and join more conversations across the community.</p>
-          <p className="mt-4 border-t border-rule pt-3 text-xs leading-5 text-muted">More profile suggestions are coming soon.</p>
-        </div>
-      </aside>
+        {!loading && hasMore && <div className="pt-7 text-center"><button onClick={() => void handleLoadMore()} disabled={loadingMore} className="rounded-full border border-[#d8c7aa] bg-[#fffaf2] px-6 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#5f4324] hover:border-[#a9813f] disabled:opacity-60">{loadingMore ? 'Loading…' : 'Load more posts'}</button></div>}
+        <footer className="mt-10 border-t border-[#dfd0b8] pt-5 text-center">
+          <p className="font-serif text-sm tracking-wide text-[#76501f]">UniVerse-City</p>
+          <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#9a8b76]">Every voice has a story</p>
+        </footer>
+      </main>
 
       {authChecked && user && ownProfile && <button type="button" onClick={() => { setText(''); setComposerOpen(true); }} aria-label="Create a post"
-        className="fixed bottom-6 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[#d4bd98] bg-[#8b6536] text-[#fffaf0] shadow-[0_8px_28px_rgba(70,48,22,.25)] transition hover:-translate-y-1 hover:bg-[#73522c] sm:bottom-8 sm:right-8 sm:h-16 sm:w-16">
+        className="fixed bottom-6 right-5 z-40 flex h-16 w-16 items-center justify-center rounded-full border border-[#d4bd98] bg-[#76501f] text-[#fffaf0] shadow-[0_8px_28px_rgba(70,48,22,.25)] transition hover:-translate-y-1 hover:bg-[#5f3f19] sm:bottom-8 sm:right-8 sm:h-[68px] sm:w-[68px]">
         <QuillIcon/>
       </button>}
 
