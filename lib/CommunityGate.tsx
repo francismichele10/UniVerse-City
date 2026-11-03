@@ -124,7 +124,7 @@ export function CommunityGate() {
        <div className="mt-3 rounded-2xl border border-[#eadfce] bg-[#faf5eb] p-3 sm:mt-5 sm:p-4">
          <p className="text-[9px] font-bold uppercase tracking-[.14em] text-[#9a7745]">Reason provided</p>
          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#493a2a]">{restriction?.reason||'Please contact the UniVerse-City team for details.'}</p>
-         <p className="mt-3 text-xs text-[#81786c]">{restriction?.expiresAt ? 'Restriction ends ' + restriction.expiresAt.toDate().toLocaleString() : 'This restriction has no scheduled expiry.'}</p>
+         <p className="mt-3 text-xs text-[#81786c]">{restriction?.expiresAt ? 'Restriction ends ' + (()=>{const date=restriction.expiresAt!.toDate();const day=date.getDate();const suffix=day%100>=11&&day%100<=13?'th':day%10===1?'st':day%10===2?'nd':day%10===3?'rd':'th';return `${day}${suffix} ${date.toLocaleDateString('en-GB',{month:'short',year:'numeric'})}`;})() : 'This restriction has no scheduled expiry.'}</p>
        </div>
        {appeal?.status==='pending'?<p className="mt-5 rounded-xl bg-[#f3efe4] p-4 text-sm text-[#675333]">Your appeal has been submitted and is awaiting administrator review.</p>
        :<div className="mt-5">
