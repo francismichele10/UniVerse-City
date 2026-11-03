@@ -196,122 +196,144 @@ export function CommunityFeed() {
   }
 
   return (
-    <div className="min-h-screen bg-[#090a0b] text-[#f4f1eb]">
-      <div className="mx-auto grid min-h-screen max-w-[1440px] lg:grid-cols-[245px_minmax(0,650px)_300px] lg:gap-8 lg:px-8">
-        <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-white/[0.07] lg:py-7 lg:pr-6">
-          <Link href="/community" className="flex items-center gap-3 px-3">
-            <img src="/logo.png" alt="" className="h-10 w-10 rounded-xl object-contain" />
-            <span className="font-serif text-xl font-semibold tracking-tight">UniVerse<span className="text-[#bd9258]">.</span></span>
-          </Link>
-          <p className="mt-2 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#77736b]">Community</p>
-          <nav className="mt-9 space-y-2 text-sm">
-            <Link href="/community" className="flex items-center gap-4 rounded-xl bg-[#bd9258]/[0.13] px-4 py-3.5 font-semibold text-[#e0b879]"><span className="text-lg">⌂</span> Home</Link>
-            {user && <Link href={ownProfile?.username ? '/community/u/' + ownProfile.username : '/community'} className="flex items-center gap-4 rounded-xl px-4 py-3.5 text-[#aaa69f] transition hover:bg-white/[0.05] hover:text-white"><span className="text-lg">◎</span> My profile</Link>}
-          </nav>
-          <div className="mt-auto space-y-4">
-            <Link href="/" className="block rounded-xl border border-white/[0.09] px-4 py-3 text-xs text-[#aaa69f] transition hover:border-[#bd9258]/50 hover:text-white">← Back to UniVerse-City</Link>
-            {user ? (
-              <div className="flex items-center gap-3 rounded-xl bg-white/[0.04] p-3">
-                <Avatar name={ownProfile?.displayName || user.displayName || 'You'} photoURL={ownProfile?.photoURL || user.photoURL} size="small" />
-                <div className="min-w-0"><p className="truncate text-xs font-semibold">{ownProfile?.displayName || user.displayName || 'Your account'}</p><p className="truncate text-[11px] text-[#77736b]">@{ownProfile?.username || 'member'}</p></div>
-              </div>
-            ) : <button type="button" onClick={handleSignIn} disabled={signingIn} className="w-full rounded-xl bg-[#bd9258] px-4 py-3 text-sm font-semibold text-[#17120c] transition hover:bg-[#d2aa73]">{signingIn ? 'Opening Google…' : 'Sign in'}</button>}
-          </div>
-        </aside>
+    <div className="mx-auto grid max-w-6xl gap-8 px-5 py-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-12 lg:py-12">
+      <section className="min-w-0">
+        <div className="mb-6 border-b border-rule pb-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brass">The student conversation</p>
+          <h2 className="mt-2 font-serif text-3xl tracking-[-0.03em] text-ink sm:text-4xl">Community feed</h2>
+          <p className="mt-2 text-sm leading-6 text-muted">What’s happening on campus? What’s on your mind? Start here.</p>
+        </div>
 
-        <main className="min-w-0 border-x border-white/[0.06]">
-          <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/[0.08] bg-[#090a0b]/90 px-4 py-3 backdrop-blur-xl sm:px-6">
-            <div className="flex items-center gap-3 lg:hidden">
-              <img src="/logo.png" alt="" className="h-8 w-8 rounded-lg object-contain" />
-              <div><p className="font-serif text-lg font-semibold leading-none">UniVerse<span className="text-[#bd9258]">.</span></p><p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-[#77736b]">Community</p></div>
-            </div>
-            <div className="hidden lg:block"><p className="font-semibold">Home</p><p className="mt-0.5 text-[11px] text-[#77736b]">The student conversation</p></div>
-            <span className="rounded-full border border-[#bd9258]/25 bg-[#bd9258]/[0.08] px-3 py-1 text-[10px] font-medium tracking-wide text-[#d2aa73]">STUDENT SPACE</span>
-          </header>
-
-          <div className="border-b border-white/[0.08] px-4 py-5 sm:px-6">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#bd9258]">Your campus. Your voice.</p>
-            <h1 className="mt-2 font-serif text-3xl tracking-tight sm:text-4xl">The Community</h1>
-            <p className="mt-2 max-w-lg text-sm leading-6 text-[#96928a]">A place for students to share ideas, ask questions and keep up with campus conversations.</p>
-          </div>
-
-          {authChecked && user && !ownProfile ? <p className="m-4 rounded-xl border border-white/10 bg-white/[0.04] p-4 text-sm text-[#aaa69f]">Loading your Community profile…</p> : null}
-          {authChecked && user && ownProfile ? (
-            <div className="border-b border-white/[0.08] p-4 sm:p-6">
-              <div className="rounded-2xl border border-white/[0.09] bg-[#111315] p-4 sm:p-5">
-                <div className="flex gap-3">
-                  <Avatar name={ownProfile.displayName || user.displayName || 'You'} photoURL={ownProfile.photoURL || user.photoURL} />
-                  <div className="min-w-0 flex-1">
-                    <label htmlFor="community-post" className="mb-2 block text-sm font-semibold text-[#e9e5dd]">Start a conversation</label>
-                    <textarea id="community-post" value={text} onChange={(event) => setText(event.target.value.slice(0, COMMUNITY_POST_MAX_LENGTH))} placeholder="What's happening on your mind?" rows={3} maxLength={COMMUNITY_POST_MAX_LENGTH} className="w-full resize-y border-0 bg-transparent px-0 py-2 text-sm leading-6 text-white outline-none placeholder:text-[#66635e] focus:ring-0" />
-                    <div className="mt-3 flex items-center justify-between border-t border-white/[0.08] pt-3">
-                      <span className={`text-[11px] ${text.length >= COMMUNITY_POST_MAX_LENGTH ? 'text-red-400' : 'text-[#77736b]'}`}>{text.length}/{COMMUNITY_POST_MAX_LENGTH}</span>
-                      <button type="button" onClick={handlePublish} disabled={publishing || !text.trim() || !ownProfile} className="rounded-full bg-[#bd9258] px-5 py-2 text-xs font-bold text-[#17120c] transition hover:bg-[#d2aa73] disabled:cursor-not-allowed disabled:opacity-40">{publishing ? 'Posting…' : 'Publish post'}</button>
-                    </div>
-                  </div>
+        {authChecked && user && !ownProfile ? <p className="mb-6 rounded-xl border border-rule bg-white p-4 text-sm text-muted">Loading your Community profile…</p> : null}
+        {authChecked && user && ownProfile ? (
+          <div className="mb-7 rounded-xl border border-rule bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex gap-3">
+              <Avatar name={user.displayName || user.email || 'You'} photoURL={user.photoURL} />
+              <div className="min-w-0 flex-1">
+                <label htmlFor="community-post" className="mb-2 block font-serif text-lg text-ink">Start a conversation</label>
+                <textarea
+                  id="community-post"
+                  value={text}
+                  onChange={(event) => setText(event.target.value.slice(0, COMMUNITY_POST_MAX_LENGTH))}
+                  placeholder="What would you like other students to know?"
+                  rows={3}
+                  maxLength={COMMUNITY_POST_MAX_LENGTH}
+                  className="w-full resize-y rounded-lg border border-rule bg-[#fcfbf8] px-3 py-3 text-sm leading-6 text-ink outline-none transition focus:border-[#a9813f] focus:ring-1 focus:ring-[#a9813f]"
+                />
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <span className={`text-xs ${text.length >= COMMUNITY_POST_MAX_LENGTH ? 'text-[#9b4b3c]' : 'text-muted'}`}>
+                    {text.length}/{COMMUNITY_POST_MAX_LENGTH}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handlePublish}
+                    disabled={publishing || !text.trim() || !ownProfile}
+                    className="rounded-lg bg-[#8b6536] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#73522c] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {publishing ? 'Publishing…' : 'Post'}
+                  </button>
                 </div>
               </div>
             </div>
-          ) : authChecked ? (
-            <div className="border-b border-white/[0.08] p-4 sm:p-6"><div className="flex flex-col gap-3 rounded-2xl border border-white/[0.09] bg-[#111315] p-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-serif text-xl">Join the conversation</h2><p className="mt-1 text-sm text-[#96928a]">Read posts freely. Sign in with Google to publish and like.</p></div><button type="button" onClick={handleSignIn} disabled={signingIn} className="rounded-full bg-[#bd9258] px-5 py-2.5 text-xs font-bold text-[#17120c]">{signingIn ? 'Opening Google…' : 'Continue with Google'}</button></div></div>
-          ) : null}
-
-          {error && <p role="alert" className="mx-4 mt-4 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-300 sm:mx-6">{error}</p>}
-
-          <div className="flex items-center justify-between px-4 py-4 sm:px-6">
-            <h2 className="text-sm font-semibold">Latest conversations</h2><span className="text-[10px] uppercase tracking-[0.15em] text-[#77736b]">Newest first</span>
           </div>
-
-          {loading ? <div className="border-y border-white/[0.07] py-16 text-center text-sm text-[#77736b]">Loading conversations…</div> : posts.length === 0 ? (
-            <div className="mx-4 mb-6 rounded-2xl border border-dashed border-white/[0.13] px-5 py-14 text-center sm:mx-6"><p className="font-serif text-2xl">It's quiet in here.</p><p className="mt-2 text-sm text-[#96928a]">Be the first to start a conversation.</p></div>
-          ) : (
-            <div className="divide-y divide-white/[0.07] border-y border-white/[0.07]">
-              {posts.map((post) => (
-                <article key={post.id} className="px-4 py-5 transition hover:bg-white/[0.015] sm:px-6">
-                  <div className="flex gap-3">
-                    <Avatar name={profiles[post.authorUid]?.displayName || post.authorName} photoURL={profiles[post.authorUid]?.photoURL || post.authorPhotoURL} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="text-sm font-semibold text-[#f1eee8]">{profiles[post.authorUid]?.displayName || post.authorName}</span>{profiles[post.authorUid]?.verified && <VerificationBadge className="inline-block -ml-1 h-4 w-4" />}{profiles[post.authorUid]?.username && <Link href={'/community/u/' + profiles[post.authorUid].username} className="text-xs text-[#858078] hover:text-[#d2aa73]">@{profiles[post.authorUid].username}</Link>}<span className="text-xs text-[#77736b]">· {formatRelativeTime(post.createdAt)}</span>
-                      </div>
-                      <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-7 text-[#d8d4cd]">{post.text}</p>
-                      <div className="mt-4 flex items-center gap-6 text-xs">
-                        <button type="button" onClick={() => void handleLike(post.id)} disabled={busyLikeId === post.id} aria-pressed={likedIds.includes(post.id)} className={likedIds.includes(post.id) ? 'font-semibold text-rose-400' : 'text-[#8b877f] transition hover:text-rose-400'}>{likedIds.includes(post.id) ? '♥ Liked' : '♡ Like'}</button>
-                        {user?.uid !== post.authorUid && <button type="button" onClick={() => void handleReport(post.id)} className="text-[#8b877f] transition hover:text-[#d2aa73]">Report</button>}
-                        {user?.uid === post.authorUid && <button type="button" onClick={() => handleDelete(post.id)} disabled={deletingId === post.id} className="ml-auto text-[#8b877f] transition hover:text-red-400">{deletingId === post.id ? 'Deleting…' : 'Delete'}</button>}
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
+        ) : authChecked ? (
+          <div className="mb-7 flex flex-col gap-4 rounded-xl border border-rule bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-serif text-xl text-ink">Join the conversation</h3>
+              <p className="mt-1 text-sm leading-6 text-muted">You can read along without an account. Sign in with Google when you’re ready to post.</p>
             </div>
-          )}
-
-          {!loading && hasMore && <div className="px-4 py-7 text-center"><button type="button" onClick={handleLoadMore} disabled={loadingMore} className="rounded-full border border-white/[0.13] px-6 py-2.5 text-xs font-semibold text-[#d8d4cd] transition hover:border-[#bd9258]/50 disabled:opacity-50">{loadingMore ? 'Loading…' : 'Load more posts'}</button></div>}
-          <footer className="px-5 py-8 text-center text-[10px] text-[#5e5b55]">A student space by UniVerse-City · <Link href="/" className="text-[#a88a60] hover:underline">Visit publication</Link></footer>
-        </main>
-
-        <aside className="hidden space-y-5 py-7 lg:block">
-          <div className="rounded-2xl border border-white/[0.08] bg-[#111315] p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#bd9258]">The UniVerse</p>
-            <h3 className="mt-2 font-serif text-2xl leading-tight">Student life, in one place.</h3>
-            <p className="mt-2 text-xs leading-6 text-[#96928a]">Discover what students are thinking, share your perspective and find your people.</p>
-            <Link href="/" className="mt-4 inline-flex text-xs font-semibold text-[#d2aa73] hover:underline">Explore UniVerse-City →</Link>
+            <button
+              type="button"
+              onClick={handleSignIn}
+              disabled={signingIn}
+              className="shrink-0 rounded-lg bg-[#8b6536] px-5 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#73522c] disabled:opacity-60"
+            >
+              {signingIn ? 'Opening Google…' : 'Sign in with Google'}
+            </button>
           </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-[#111315] p-5">
-            <h3 className="text-sm font-semibold">Community guidelines</h3>
-            <ul className="mt-3 space-y-3 text-xs leading-5 text-[#96928a]"><li><span className="mr-2 text-[#bd9258]">01</span> Keep conversations respectful.</li><li><span className="mr-2 text-[#bd9258]">02</span> Challenge ideas, not people.</li><li><span className="mr-2 text-[#bd9258]">03</span> Respect everyone's privacy.</li><li><span className="mr-2 text-[#bd9258]">04</span> Posts are text-only for now.</li></ul>
-          </div>
-          <div className="px-2 text-[10px] leading-5 text-[#5e5b55]">Independent student voices. Shared campus experiences.</div>
-        </aside>
-      </div>
+        ) : null}
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-white/[0.09] bg-[#0d0f10]/95 px-3 pb-[max(env(safe-area-inset-bottom),10px)] pt-3 backdrop-blur-xl lg:hidden">
-        <Link href="/community" className="flex flex-col items-center gap-1 text-[#d2aa73]"><span className="text-xl">⌂</span><span className="text-[9px]">Home</span></Link>
-        {user && <Link href={ownProfile?.username ? '/community/u/' + ownProfile.username : '/community'} className="flex flex-col items-center gap-1 text-[#8b877f]"><span className="text-xl">◎</span><span className="text-[9px]">Profile</span></Link>}
-        {!user && <button type="button" onClick={handleSignIn} className="flex flex-col items-center gap-1 text-[#8b877f]"><span className="text-xl">↗</span><span className="text-[9px]">Sign in</span></button>}
-      </nav>
-      <div className="h-20 lg:hidden" />
+        {error && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-serif text-xl text-ink">Recent posts</h3>
+          <span className="text-[10px] uppercase tracking-[0.14em] text-muted">Latest first</span>
+        </div>
+
+        {loading ? (
+          <div className="border-y border-rule py-12 text-center text-sm text-muted">Loading conversations…</div>
+        ) : posts.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[#d8d0c1] bg-[#faf9f6] px-5 py-12 text-center">
+            <p className="font-serif text-2xl text-ink">It’s quiet in here. For now.</p>
+            <p className="mt-2 text-sm leading-6 text-muted">Be the first to start a conversation with other students.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-rule border-y border-rule bg-white">
+            {posts.map((post) => (
+              <article key={post.id} className="px-4 py-5 sm:px-5">
+                <div className="flex gap-3">
+                  <Avatar name={post.authorName} photoURL={post.authorPhotoURL} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="text-sm font-semibold text-ink">{profiles[post.authorUid]?.displayName || post.authorName}</span>{profiles[post.authorUid]?.verified && <VerificationBadge className="inline-block h-4 w-4 -ml-1" />}{profiles[post.authorUid]?.username && <Link href={'/community/u/' + profiles[post.authorUid].username} className="text-xs text-muted hover:underline">@{profiles[post.authorUid].username}</Link>}
+                      <span className="text-xs text-muted">· {formatRelativeTime(post.createdAt)}</span>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-7 text-[#343832]">{post.text}</p>
+                    <div className="mt-3 flex items-center gap-5 text-[11px]">
+                      <button type="button" onClick={() => void handleLike(post.id)} disabled={busyLikeId === post.id}
+                        aria-pressed={likedIds.includes(post.id)}
+                        className={likedIds.includes(post.id) ? 'font-semibold text-[#a34f54]' : 'text-[#77766f] hover:text-[#a34f54]'}>
+                        {likedIds.includes(post.id) ? '♥ Liked' : '♡ Like'}
+                      </button>
+                      {user?.uid !== post.authorUid && <button type="button" onClick={() => void handleReport(post.id)} className="text-[#77766f] hover:text-[#a34f54]">Report</button>}
+                    </div>
+                    {user?.uid === post.authorUid && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(post.id)}
+                        disabled={deletingId === post.id}
+                        className="mt-3 text-xs text-muted underline decoration-rule underline-offset-4 transition hover:text-red-700 disabled:opacity-50"
+                      >
+                        {deletingId === post.id ? 'Deleting…' : 'Delete post'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {!loading && hasMore && (
+          <div className="pt-6 text-center">
+            <button
+              type="button"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="rounded-lg border border-rule bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink transition hover:border-[#a9813f] disabled:opacity-60"
+            >
+              {loadingMore ? 'Loading…' : 'Load more posts'}
+            </button>
+          </div>
+        )}
+      </section>
+
+      <aside className="space-y-5 lg:pt-[76px]">
+        <div className="rounded-xl border border-rule bg-[#faf9f6] p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">A space for students</p>
+          <h3 className="mt-2 font-serif text-xl text-ink">Campus life, unfiltered.</h3>
+          <p className="mt-2 text-sm leading-6 text-muted">Share what’s happening, ask for advice, exchange ideas and hear different points of view.</p>
+        </div>
+        <div className="rounded-xl border border-rule bg-white p-5">
+          <h3 className="font-serif text-lg text-ink">A few ground rules</h3>
+          <ul className="mt-3 space-y-2 text-sm leading-6 text-muted">
+            <li>• Keep it respectful.</li>
+            <li>• Disagree with ideas, not people.</li>
+            <li>• Don’t share someone else’s private information.</li>
+            <li>• Posts are text-only for now.</li>
+          </ul>
+        </div>
+      </aside>
     </div>
   );
 }
