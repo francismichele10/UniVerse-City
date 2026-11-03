@@ -153,9 +153,16 @@ describe('Community Firestore security rules', () => {
     await assertFails(updateDoc(doc(owner, 'communityPosts', post.id), { status: 'hidden' }));
     const admin = signedIn('admin-uid', 'admin@example.com');
     await assertSucceeds(updateDoc(doc(admin, 'communityPosts', post.id), { status: 'hidden' }));
-    await assertSucceeds(setDoc(doc(admin, 'moderationLogs', 'test-log'), {
+    const logRef = doc(admin, 'moderationLogs', 'test-log');
+    await assertSucceeds(setDoc(logRef, {
       actorEmail: 'admin@example.com', action: 'community_post_hidden',
+      targetUid: 'student-uid-001', reason: 'Test moderation action', createdAt: serverTimestamp(),
+    }));
+    await assertFails(setDoc(doc(owner, 'moderationLogs', 'student-log'), {
+      actorEmail: 'student@example.com', action: 'forged_action',
       targetUid: 'student-uid-001', createdAt: serverTimestamp(),
     }));
+    await assertFails(updateDoc(logRef, { reason: 'Tampered log' }));
+    await assertFails(deleteDoc(logRef));
   });
 });
