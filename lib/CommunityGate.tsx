@@ -27,6 +27,7 @@ export function CommunityGate() {
  const [appeal,setAppeal]=useState<Appeal|null>(null);
  const [appealText,setAppealText]=useState('');
  const [appealModalOpen,setAppealModalOpen]=useState(false);
+ const [appealSubmitted,setAppealSubmitted]=useState(false);
  const [submitting,setSubmitting]=useState(false);
  const [appealError,setAppealError]=useState('');
  const [restrictionChecked,setRestrictionChecked]=useState(false);
@@ -69,7 +70,7 @@ export function CommunityGate() {
          message, status:'pending', createdAt:serverTimestamp(),
        });
      }
-     setAppeal({status:'pending',message:appealText.trim()});setAppealText('');
+     setAppeal({status:'pending',message:appealText.trim()});setAppealText('');setAppealSubmitted(true);
    }catch(e){setAppealError(e instanceof Error?e.message:'Your appeal could not be submitted. Please try again.');}
    finally{setSubmitting(false);}
  }
@@ -136,20 +137,28 @@ export function CommunityGate() {
    </div>}
    {appealModalOpen&&blocked&&<div className="fixed inset-0 z-[130] flex items-center justify-center bg-[#211b13]/70 px-3 py-3 backdrop-blur-sm sm:px-5 sm:py-6">
      <section role="dialog" aria-modal="true" aria-labelledby="appeal-modal-title" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-[26px] border border-[#d9c39d] bg-[#fffdf8] shadow-2xl sm:max-h-[calc(100dvh-3rem)]">
-       <header className="flex shrink-0 items-start justify-between gap-4 border-b border-[#eadfce] px-5 py-4 sm:px-7 sm:py-5">
-         <div><p className="text-[9px] font-bold uppercase tracking-[.2em] text-[#a17b47]">Community access review</p><h2 id="appeal-modal-title" className="mt-1 font-serif text-2xl text-[#38291c] sm:text-3xl">Write your appeal</h2><p className="mt-1 text-xs text-[#766b5c]">Explain your situation and why you believe your restriction should be reviewed.</p></div>
-         <button type="button" onClick={()=>setAppealModalOpen(false)} aria-label="Close appeal form" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e5ddce] text-xl leading-none text-[#766b5c] transition hover:bg-[#f5efe5]">×</button>
-       </header>
-       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-7 sm:py-6">
-         <label htmlFor="restriction-appeal" className="block text-sm font-semibold text-[#55432e]">Your message</label>
-         <textarea id="restriction-appeal" autoFocus value={appealText} onChange={e=>setAppealText(e.target.value.slice(0,1500))} maxLength={1500} placeholder="Explain what happened, provide any helpful context, and tell us why you would like the decision reviewed…" className="mt-3 min-h-[min(48vh,380px)] w-full resize-y rounded-2xl border border-[#e5ddce] bg-white p-4 text-sm leading-7 text-[#30251b] outline-none transition focus:border-[#a9813f] focus:ring-2 focus:ring-[#a9813f]/15"/>
-         <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#978b7a]"><span>Be respectful and include any relevant details.</span><span className="font-semibold tabular-nums">{appealText.length}/1500</span></div>
-         {appealError&&<p role="alert" className="mt-4 rounded-xl bg-[#f8efec] p-3 text-sm text-red-700">{appealError}</p>}
-       </div>
-       <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-[#eadfce] bg-[#fffdf8] px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
-         <button type="button" onClick={()=>setAppealModalOpen(false)} disabled={submitting} className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#ded2bd] px-6 py-3 text-sm font-semibold text-[#705a3c] transition hover:bg-[#f8f3e9] disabled:opacity-50">Back</button>
-         <button type="button" onClick={()=>void submitAppeal()} disabled={!appealText.trim()||submitting} className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#76501f] px-7 py-3 text-sm font-semibold text-white shadow-[0_4px_0_#4f3515] transition-all hover:-translate-y-0.5 hover:bg-[#89612b] active:translate-y-[2px] active:shadow-[0_2px_0_#4f3515] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none">{submitting?'Submitting…':'Submit appeal'}</button>
-       </footer>
+       {appealSubmitted?<div className="px-6 py-9 text-center sm:px-9 sm:py-12">
+         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#e8f3e7] text-2xl font-semibold text-[#47734b]">✓</div>
+         <div className="mx-auto mt-5 max-w-md rounded-2xl border border-[#cfe3cc] bg-[#eff7ed] px-5 py-5 text-[#426746]">
+           <h2 id="appeal-modal-title" className="font-serif text-2xl text-[#365b3b] sm:text-3xl">Appeal Submitted</h2>
+           <p className="mt-2 text-sm leading-6">Your appeal has been received and is waiting for review. We’ll update you once it has been reviewed.</p>
+         </div>
+         <button type="button" onClick={()=>{setAppealSubmitted(false);setAppealModalOpen(false);}} className="mt-6 inline-flex min-h-11 w-full max-w-xs items-center justify-center rounded-full bg-[#76501f] px-7 py-3 text-sm font-semibold text-white shadow-[0_4px_0_#4f3515] transition-all hover:-translate-y-0.5 hover:bg-[#89612b] active:translate-y-[2px] active:shadow-[0_2px_0_#4f3515]">Okay</button>
+       </div>:<>
+         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-[#eadfce] px-5 py-4 sm:px-7 sm:py-5">
+           <div><p className="text-[9px] font-bold uppercase tracking-[.2em] text-[#a17b47]">Community access review</p><h2 id="appeal-modal-title" className="mt-1 font-serif text-2xl text-[#38291c] sm:text-3xl">Write your appeal</h2><p className="mt-1 text-xs text-[#766b5c]">Explain your situation and why you believe your restriction should be reviewed.</p></div>
+           <button type="button" onClick={()=>setAppealModalOpen(false)} aria-label="Close appeal form" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e5ddce] text-xl leading-none text-[#766b5c] transition hover:bg-[#f5efe5]">×</button>
+         </header>
+         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-7 sm:py-6">
+           <label htmlFor="restriction-appeal" className="block text-sm font-semibold text-[#55432e]">Your message</label>
+           <textarea id="restriction-appeal" autoFocus value={appealText} onChange={e=>setAppealText(e.target.value.slice(0,1500))} maxLength={1500} placeholder="Explain what happened, provide any helpful context, and tell us why you would like the decision reviewed…" className="mt-3 min-h-[min(48vh,380px)] w-full resize-y rounded-2xl border border-[#e5ddce] bg-white p-4 text-sm leading-7 text-[#30251b] outline-none transition focus:border-[#a9813f] focus:ring-2 focus:ring-[#a9813f]/15"/>
+           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#978b7a]"><span>Be respectful and include any relevant details.</span><span className="font-semibold tabular-nums">{appealText.length}/1500</span></div>
+           {appealError&&<p role="alert" className="mt-4 rounded-xl bg-[#f8efec] p-3 text-sm text-red-700">{appealError}</p>}
+         </div>
+         <footer className="shrink-0 border-t border-[#eadfce] bg-[#fffdf8] px-5 py-4 sm:px-7">
+           <button type="button" onClick={()=>void submitAppeal()} disabled={!appealText.trim()||submitting} className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#76501f] px-7 py-3 text-sm font-semibold text-white shadow-[0_4px_0_#4f3515] transition-all hover:-translate-y-0.5 hover:bg-[#89612b] active:translate-y-[2px] active:shadow-[0_2px_0_#4f3515] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none">{submitting?'Submitting…':'Submit appeal'}</button>
+         </footer>
+       </>}
      </section>
    </div>}
    {showWelcomeBack&&!blocked&&<div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#211b13]/60 px-5 py-6 backdrop-blur-sm"><section role="dialog" aria-modal="true" aria-labelledby="welcome-back-title" className="w-full max-w-md rounded-[26px] border border-[#d9c39d] bg-[#fffdf8] px-7 py-8 text-center shadow-2xl sm:px-9 sm:py-10"><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#edf4e9] text-2xl text-[#426d48]">✓</div><p className="mt-4 text-[9px] font-bold uppercase tracking-[0.2em] text-[#a17b47]">Community access restored</p><h2 id="welcome-back-title" className="mt-2 font-serif text-3xl text-[#38291c]">Welcome back!</h2><p className="mt-3 text-sm leading-6 text-[#766b5c]">Your appeal has been approved or your restriction has been lifted. Your Community access has been restored. You’re welcome to participate again.</p><button onClick={()=>setShowWelcomeBack(false)} className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#76501f] px-5 py-3 text-sm font-semibold text-white shadow-[0_4px_0_#4f3515] transition hover:-translate-y-0.5 hover:bg-[#89612b] active:translate-y-[2px] active:shadow-none">Continue to Community</button></section></div>}
