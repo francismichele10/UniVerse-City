@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import {
-  addDoc, collection, deleteDoc, doc, getDocs, limit, orderBy, query, serverTimestamp, startAfter, updateDoc,
+  addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, startAfter, updateDoc,
   type DocumentData, type QueryDocumentSnapshot,
 } from 'firebase/firestore/lite';
 import { db } from '@/lib/firebase';
@@ -14,6 +14,8 @@ type CommunityPost = {
   text: string;
   authorUid: string;
   authorName: string;
+  authorDisplayName?: string;
+  authorUsername?: string;
   authorPhotoURL?: string | null;
   status: 'published' | 'hidden';
   createdAt?: { toDate?: () => Date } | Date | null;
@@ -47,7 +49,20 @@ export default function AdminCommunityPage() {
     try {
       const constraints = [orderBy('createdAt', 'desc'), ...(append && cursor ? [startAfter(cursor)] : []), limit(PAGE_SIZE)];
       const snapshot = await getDocs(query(collection(db, 'communityPosts'), ...constraints));
-      const nextPosts = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as CommunityPost);
+      const rawPosts = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as CommunityPost);
+      const nextPosts = await Promise.all(rawPosts.map(async post => {
+        try {
+          const profileSnap = await getDoc(doc(db, 'communityProfiles', post.authorUid));
+          const profile = profileSnap.exists() ? profileSnap.data() : null;
+          return {
+            ...post,
+            authorDisplayName: typeof profile?.displayName === 'string' ? profile.displayName : post.authorName,
+            authorUsername: typeof profile?.username === 'string' ? profile.username : '',
+          };
+        } catch {
+          return { ...post, authorDisplayName: post.authorName, authorUsername: '' };
+        }
+      }));
       setPosts((current) => append ? [...current, ...nextPosts] : nextPosts);
       setCursor(snapshot.docs.length ? snapshot.docs[snapshot.docs.length - 1] : append ? cursor : null);
       setHasMore(snapshot.docs.length === PAGE_SIZE);
@@ -171,7 +186,8 @@ export default function AdminCommunityPage() {
                 <div className="flex items-start gap-3">
                   {post.authorPhotoURL ? <img src={post.authorPhotoURL} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eee8dc] text-xs font-bold text-[#76562f]">{post.authorName?.slice(0,1).toUpperCase() || 'U'}</div>}
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold text-[#34372f]">{post.authorName || 'Community member'}</span><span className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-[0.12em] ${post.status === 'hidden' ? 'bg-[#f7eeee] text-[#934c43]' : 'bg-[#edf5ed] text-[#426d48]'}`}>{post.status}</span></div>
+                    <div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold text-[#34372f]">{post.authorDisplayName || post.authorName || 'Community member'}</span><span className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-[0.12em] ${post.status === 'hidden' ? 'bg-[#f7eeee] text-[#934c43]' : 'bg-[#edf5ed] text-[#426d48]'}`}>{post.status}</span></div>
+                    {post.authorUsername && <p className="mt-1 text-[10px] text-[#8a806f]">@{post.authorUsername}</p>}
                     <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-[#343832]">{post.text}</p>
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                       <div className="text-[10px] leading-5 text-[#96938a]">{dateLabel(post.createdAt)} · UID: <span className="break-all">{post.authorUid}</span></div>
@@ -179,9 +195,16 @@ export default function AdminCommunityPage() {
                     </div>
                     {(reports[post.id] || []).length > 0 && <div className="mt-4 rounded-xl border border-[#e8ddca] bg-[#f8f4eb] p-4">
                       <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#8a6332]">User reports · {(reports[post.id] || []).length}</p>
+                      <div className="mt-3 rounded-lg border border-[#e8ddca] bg-white/70 p-3">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#8a6332]">Reported account</p>
+                        <p className="mt-1 text-xs font-semibold text-[#343832]">{post.authorDisplayName || post.authorName || 'Name unavailable'}</p>
+                        {post.authorUsername && <p className="mt-0.5 text-[10px] text-[#765a35]">@{post.authorUsername}</p>}
+                        <p className="mt-1 break-all text-[10px] leading-5 text-[#77766f]">UID: {post.authorUid}</p>
+                      </div>
                       <div className="mt-3 space-y-3">{reports[post.id].map(report => <div key={report.id} className="border-t border-[#e8ddca] pt-3 first:border-0 first:pt-0">
                         <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[9px] font-bold uppercase tracking-wider text-[#765a35]">{report.status}</span><span className="text-[9px] text-[#96938a]">{dateLabel(report.createdAt)}</span></div>
                         <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-[#343832]">{report.reason}</p>
+                        <p className="mt-1 break-all text-[10px] leading-5 text-[#8a806f]">Reported by UID: {report.reporterUid || 'Unavailable'}</p>
                         {report.status === 'open' && <button type="button" onClick={() => void markReportReviewed(post.id, report)} className="mt-2 text-[10px] font-bold text-[#765a35] underline underline-offset-4">Mark as reviewed</button>}
                       </div>)}</div>
                     </div>}
