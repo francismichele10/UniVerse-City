@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
-  collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, setDoc, Timestamp, addDoc,
+  collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, setDoc, Timestamp, addDoc, updateDoc,
 } from 'firebase/firestore/lite';
 import { db } from '@/lib/firebase';
 import { watchAdminAuth } from '@/lib/adminAuth';
@@ -43,15 +43,20 @@ export default function AdminRestrictionsPage() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
+  const [appeals, setAppeals] = useState<any[]>([]);
+  const [appealsLoading, setAppealsLoading] = useState(true);
+  const [reviewingAppeal, setReviewingAppeal] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
       const snapshot = await getDocs(query(collection(db, 'accountRestrictions'), orderBy('updatedAt', 'desc')));
       setItems(snapshot.docs.map((item) => ({ uid: item.id, ...item.data() }) as Restriction));
+      const appealSnapshot = await getDocs(query(collection(db, 'restrictionAppeals'), orderBy('createdAt', 'desc')));
+      setAppeals(appealSnapshot.docs.map(item => ({ uid: item.id, ...item.data() })));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load account restrictions.');
-    } finally { setLoading(false); }
+    } finally { setLoading(false); setAppealsLoading(false); }
   }, []);
 
   useEffect(() => {
@@ -113,6 +118,35 @@ export default function AdminRestrictionsPage() {
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not lift this restriction.'); }
   }
 
+  async function reviewAppeal(item: any, decision: 'approved' | 'rejected') {
+    const note = decision === 'approved'
+      ? 'Appeal approved. This account restriction has been lifted.'
+      : (window.prompt('Optional note for the user explaining the decision:') || '').trim();
+    if (decision === 'rejected' && !window.confirm('Reject this appeal?')) return;
+    if (decision === 'approved' && !window.confirm('Approve this appeal and lift the account restriction?')) return;
+    setReviewingAppeal(item.uid); setError(''); setNotice('');
+    try {
+      await updateDoc(doc(db, 'restrictionAppeals', item.uid), {
+        status: decision, decisionNote: note, reviewedBy: adminEmail, reviewedAt: serverTimestamp(),
+      });
+      if (decision === 'approved') {
+        await deleteDoc(doc(db, 'accountRestrictions', item.uid));
+        await addDoc(collection(db, 'moderationLogs'), {
+          actorEmail: adminEmail, action: 'restriction_appeal_approved', targetUid: item.uid,
+          reason: item.reason || 'Appeal approved', createdAt: serverTimestamp(),
+        });
+      } else {
+        await addDoc(collection(db, 'moderationLogs'), {
+          actorEmail: adminEmail, action: 'restriction_appeal_rejected', targetUid: item.uid,
+          reason: note || 'Appeal rejected', createdAt: serverTimestamp(),
+        });
+      }
+      setNotice(decision === 'approved' ? 'Appeal approved and restriction lifted.' : 'Appeal rejected.');
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not review this appeal.'); }
+    finally { setReviewingAppeal(null); }
+  }
+
   function isActive(item: Restriction) {
     return item.active && (!item.expiresAt || item.expiresAt.toDate().getTime() > Date.now());
   }
@@ -155,6 +189,17 @@ export default function AdminRestrictionsPage() {
           <button disabled={saving} className="rounded-full bg-[#263128] px-6 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-white hover:bg-[#39483b] disabled:opacity-50">{saving ? 'Saving…' : 'Apply restriction'}</button>
         </div>
       </form>
+
+      <section className="mt-8 overflow-hidden rounded-[22px] border border-[#e7e2d8] bg-[#fbfaf7]">
+        <div className="border-b border-[#ebe6dc] p-5"><h2 className="font-serif text-xl text-[#292e28]">Suspension appeals</h2><p className="mt-1 text-[10px] text-[#96938a]">Review appeals submitted by Community members with full suspensions.</p></div>
+        {appealsLoading ? <p className="p-7 text-sm text-[#77766f]">Loading appeals…</p> : appeals.filter(item => item.status === 'pending').length === 0 ? <p className="p-8 text-center text-sm text-[#89877f]">There are no pending appeals.</p> : <div className="divide-y divide-[#eee9e0]">{appeals.filter(item => item.status === 'pending').map(item => <article key={item.uid} className="p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2"><p className="break-all text-xs font-bold text-[#34372f]">{item.email || item.uid}</p><span className="rounded-full bg-[#f5eddb] px-2.5 py-1 text-[9px] font-bold uppercase text-[#805f2e]">Pending</span></div>
+          <p className="mt-3 text-xs font-semibold text-[#765a35]">Original reason: {item.reason || 'Not supplied'}</p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#575950]">{item.message}</p>
+          <p className="mt-2 text-[10px] text-[#96938a]">User UID: {item.uid}</p>
+          <div className="mt-4 flex flex-wrap gap-2"><button disabled={reviewingAppeal === item.uid} onClick={() => void reviewAppeal(item, 'approved')} className="rounded-full bg-[#314b37] px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide text-white disabled:opacity-50">{reviewingAppeal === item.uid ? 'Saving…' : 'Approve & lift restriction'}</button><button disabled={reviewingAppeal === item.uid} onClick={() => void reviewAppeal(item, 'rejected')} className="rounded-full border border-[#d9c6bd] px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide text-[#934c43] disabled:opacity-50">Reject appeal</button></div>
+        </article>)}</div>}
+      </section>
 
       <section className="mt-8 overflow-hidden rounded-[22px] border border-[#e7e2d8] bg-[#fbfaf7]">
         <div className="flex flex-col gap-3 border-b border-[#ebe6dc] p-5 sm:flex-row sm:items-center sm:justify-between">
