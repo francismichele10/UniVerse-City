@@ -17,6 +17,7 @@ type CommunityPost = {
   status: 'published' | 'hidden';
   createdAt?: { toDate?: () => Date } | Date | null;
 };
+type CommunityReport = { id: string; reporterUid: string; reason: string; status: 'open' | 'reviewed'; createdAt?: { toDate?: () => Date } | Date | null };
 
 const PAGE_SIZE = 25;
 
@@ -36,6 +37,7 @@ export default function AdminCommunityPage() {
   const [filter, setFilter] = useState<'all' | 'published' | 'hidden'>('all');
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [reports, setReports] = useState<Record<string, CommunityReport[]>>({});
 
   const load = useCallback(async (append = false) => {
     if (append && (!hasMore || loadingMore)) return;
@@ -48,6 +50,11 @@ export default function AdminCommunityPage() {
       setPosts((current) => append ? [...current, ...nextPosts] : nextPosts);
       setCursor(snapshot.docs.length ? snapshot.docs[snapshot.docs.length - 1] : append ? cursor : null);
       setHasMore(snapshot.docs.length === PAGE_SIZE);
+      const reportRows = await Promise.all(nextPosts.map(async post => {
+        const reportSnap = await getDocs(query(collection(db, 'communityPosts', post.id, 'reports'), orderBy('createdAt', 'desc')));
+        return [post.id, reportSnap.docs.map(item => ({ id: item.id, ...item.data() }) as CommunityReport)] as const;
+      }));
+      setReports(current => ({ ...current, ...Object.fromEntries(reportRows) }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load Community posts.');
     } finally {
@@ -87,6 +94,13 @@ export default function AdminCommunityPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update this post.');
     } finally { setBusyId(null); }
+  }
+
+  async function markReportReviewed(postId: string, report: CommunityReport) {
+    try {
+      await updateDoc(doc(db, 'communityPosts', postId, 'reports', report.id), { status: 'reviewed' });
+      setReports(current => ({ ...current, [postId]: (current[postId] || []).map(item => item.id === report.id ? { ...item, status: 'reviewed' } : item) }));
+    } catch { setError('Could not update this report. Please try again.'); }
   }
 
   async function remove(post: CommunityPost) {
@@ -153,6 +167,14 @@ export default function AdminCommunityPage() {
                       <div className="text-[10px] leading-5 text-[#96938a]">{dateLabel(post.createdAt)} · UID: <span className="break-all">{post.authorUid}</span></div>
                       <div className="flex gap-4 text-[10px] font-bold"><button disabled={busyId === post.id} onClick={() => void setVisibility(post)} className="text-[#765a35] underline underline-offset-4 disabled:opacity-40">{post.status === 'hidden' ? 'Restore post' : 'Hide post'}</button><button disabled={busyId === post.id} onClick={() => void remove(post)} className="text-[#a45a50] underline underline-offset-4 disabled:opacity-40">Delete permanently</button></div>
                     </div>
+                    {(reports[post.id] || []).length > 0 && <div className="mt-4 rounded-xl border border-[#e8ddca] bg-[#f8f4eb] p-4">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#8a6332]">User reports · {(reports[post.id] || []).length}</p>
+                      <div className="mt-3 space-y-3">{reports[post.id].map(report => <div key={report.id} className="border-t border-[#e8ddca] pt-3 first:border-0 first:pt-0">
+                        <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[9px] font-bold uppercase tracking-wider text-[#765a35]">{report.status}</span><span className="text-[9px] text-[#96938a]">{dateLabel(report.createdAt)}</span></div>
+                        <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-[#343832]">{report.reason}</p>
+                        {report.status === 'open' && <button type="button" onClick={() => void markReportReviewed(post.id, report)} className="mt-2 text-[10px] font-bold text-[#765a35] underline underline-offset-4">Mark as reviewed</button>}
+                      </div>)}</div>
+                    </div>}
                   </div>
                 </div>
               </article>
