@@ -24,7 +24,7 @@ type CommunityComment = {
 };
 
 function initials(name: string) {
-  return name.trim().split(/\\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase() || 'U';
+  return name.trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase() || 'U';
 }
 
 function Avatar({ name, photoURL, size = 'normal' }: { name: string; photoURL?: string | null; size?: 'normal' | 'small' }) {
@@ -230,7 +230,7 @@ export function CommunityFeed() {
         {loading ? <div className="border-y border-rule py-12 text-center text-sm text-muted">Loading conversations…</div>
           : posts.length === 0 ? <div className="rounded-xl border border-dashed border-[#d8d0c1] bg-[#faf9f6] px-5 py-12 text-center"><p className="font-serif text-2xl text-ink">It’s quiet in here. For now.</p><p className="mt-2 text-sm leading-6 text-muted">Be the first to start a conversation with other students.</p></div>
           : <div className="divide-y divide-rule border-y border-rule bg-white">
-            {posts.map(post => <article key={post.id} className="px-3 py-5 sm:px-5">
+            {posts.map(post => <article key={post.id} className="px-3 py-3.5 sm:px-4 sm:py-4">
               <div className="flex gap-3">
                 <Avatar name={post.authorName} photoURL={post.authorPhotoURL}/>
                 <div className="min-w-0 flex-1">
@@ -240,8 +240,8 @@ export function CommunityFeed() {
                     {profiles[post.authorUid]?.username && <Link href={'/community/u/'+profiles[post.authorUid].username} className="max-w-full break-all text-xs text-muted hover:underline">@{profiles[post.authorUid].username}</Link>}
                     <span className="text-xs text-muted">· {formatRelativeTime(post.createdAt)}</span>
                   </div>
-                  <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-7 text-[#343832]">{post.text}</p>
-                  <div className="mt-4 flex items-center gap-7 text-xs">
+                  <p className="mt-1.5 whitespace-pre-wrap break-words text-[14px] leading-6 text-[#343832]">{post.text}</p>
+                  <div className="mt-3 flex items-center gap-6 text-xs">
                     <button type="button" onClick={() => void handleLike(post.id)} disabled={busyLikeId === post.id} aria-pressed={likedIds.includes(post.id)}
                       className={`inline-flex items-center gap-2 transition ${likedIds.includes(post.id) ? 'font-semibold text-[#9b4b52]' : 'text-[#77766f] hover:text-[#9b4b52]'}`}>
                       <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill={likedIds.includes(post.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7"><path d="M20.8 8.8c0 5.1-8.8 11-8.8 11s-8.8-5.9-8.8-11A4.7 4.7 0 0 1 12 6.2a4.7 4.7 0 0 1 8.8 2.6Z" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -252,8 +252,8 @@ export function CommunityFeed() {
                       <span className="sr-only">Comment</span><span>{commentCounts[post.id] || 0}</span>
                     </button>
                   </div>
-                  {user?.uid !== post.authorUid && <button type="button" onClick={() => void handleReport(post.id)} className="mt-3 text-[11px] text-muted hover:text-[#9b4b52]">Report</button>}
-                  {user?.uid === post.authorUid && <button type="button" onClick={() => void handleDelete(post.id)} disabled={deletingId === post.id} className="mt-3 text-[11px] text-muted underline underline-offset-4 hover:text-red-700 disabled:opacity-50">{deletingId === post.id ? 'Deleting…' : 'Delete post'}</button>}
+                  {user?.uid !== post.authorUid && <button type="button" onClick={() => void handleReport(post.id)} className="mt-2 text-[11px] text-muted hover:text-[#9b4b52]">Report</button>}
+                  {user?.uid === post.authorUid && <button type="button" onClick={() => void handleDelete(post.id)} disabled={deletingId === post.id} className="mt-2 text-[11px] text-muted underline underline-offset-4 hover:text-red-700 disabled:opacity-50">{deletingId === post.id ? 'Deleting…' : 'Delete post'}</button>}
                 </div>
               </div>
             </article>)}
@@ -301,6 +301,8 @@ function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn }: {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [dragStart, setDragStart] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   const loadComments = useCallback(async () => {
     setLoading(true);
@@ -376,16 +378,22 @@ function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn }: {
   }
 
   return <div className="fixed inset-0 z-[90] flex items-end justify-center bg-[#211b13]/45 backdrop-blur-[2px] sm:items-center sm:p-5" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
-    <section role="dialog" aria-modal="true" aria-label="Comments" className={`flex w-full flex-col overflow-hidden rounded-t-2xl border border-[#e5ddce] bg-[#fffdf9] shadow-2xl transition-[height,max-height] duration-200 sm:max-w-2xl sm:rounded-2xl ${size === 'full' ? 'h-[96dvh] sm:h-[88vh]' : 'h-[62dvh] sm:h-[min(680px,78vh)]'}`}>
+    <section role="dialog" aria-modal="true" aria-label="Comments" style={{ transform: dragOffset ? `translateY(${Math.max(0, dragOffset)}px)` : undefined, transition: isDragging ? 'none' : 'transform 280ms cubic-bezier(.22,1,.36,1), height 280ms cubic-bezier(.22,1,.36,1)' }} className={`flex w-full flex-col overflow-hidden rounded-t-2xl border border-[#e5ddce] bg-[#fffdf9] shadow-2xl will-change-transform sm:max-w-2xl sm:rounded-2xl ${size === 'full' ? 'h-[96dvh] sm:h-[88vh]' : 'h-[62dvh] sm:h-[min(680px,78vh)]'}`}>
       <div className="shrink-0 border-b border-rule">
-        <div className="flex h-7 items-center justify-center sm:hidden" onTouchStart={event => setDragStart(event.touches[0].clientY)} onTouchEnd={event => {
-          if (dragStart === null) return;
-          const delta = event.changedTouches[0].clientY - dragStart;
-          if (delta < -35) setSize('full');
-          else if (delta > 35) { if (size === 'full') setSize('half'); else onClose(); }
-          setDragStart(null);
-        }}>
-          <button aria-label={size === 'half' ? 'Expand comments' : 'Collapse comments'} onClick={() => setSize(current => current === 'half' ? 'full' : 'half')} className="h-1.5 w-10 rounded-full bg-[#c9c1b4]"/>
+        <div
+          className="flex h-9 touch-none cursor-grab items-center justify-center active:cursor-grabbing sm:hidden"
+          onPointerDown={event => { setDragStart(event.clientY); setIsDragging(true); event.currentTarget.setPointerCapture(event.pointerId); }}
+          onPointerMove={event => { if (dragStart !== null) setDragOffset(event.clientY - dragStart); }}
+          onPointerUp={event => {
+            if (dragStart === null) return;
+            const delta = event.clientY - dragStart;
+            if (delta < -45) setSize('full');
+            else if (delta > 90) { if (size === 'full') setSize('half'); else onClose(); }
+            setDragStart(null); setDragOffset(0); setIsDragging(false);
+          }}
+          onPointerCancel={() => { setDragStart(null); setDragOffset(0); setIsDragging(false); }}
+        >
+          <span className="h-1.5 w-10 rounded-full bg-[#c9c1b4]"/>
         </div>
         <div className="flex items-center justify-between px-4 pb-3 pt-1 sm:px-5 sm:py-4">
           <button onClick={onClose} className="text-sm text-muted sm:hidden">Close</button>
