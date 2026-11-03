@@ -69,22 +69,44 @@ export function CommunityFeed() {
     try {
       const result = await getCommunityPosts();
       setPosts(result.posts); setCursor(result.cursor); setHasMore(result.hasMore);
-      const counts = await Promise.all(result.posts.map(async post => {
+
+      // Post retrieval is the critical path. Counts and personal like state are
+      // supplementary, so a denied/missing subcollection must not hide the feed.
+      const countResults = await Promise.allSettled(result.posts.map(async post => {
         const [likes, comments] = await Promise.all([
           getDocs(collection(db, 'communityPosts', post.id, 'likes')),
           getDocs(collection(db, 'communityPosts', post.id, 'comments')),
         ]);
         return [post.id, likes.size, comments.docs.filter(item => !item.data().parentId).length] as const;
       }));
-      setLikeCounts(Object.fromEntries(counts.map(([id, likes]) => [id, likes])));
-      setCommentCounts(Object.fromEntries(counts.map(([id, , comments]) => [id, comments])));
+      const nextLikes: Record<string, number> = {};
+      const nextComments: Record<string, number> = {};
+      countResults.forEach(result => {
+        if (result.status === 'fulfilled') {
+          const [id, likes, comments] = result.value;
+          nextLikes[id] = likes;
+          nextComments[id] = comments;
+        } else {
+          console.error('Community post counts could not be loaded:', result.reason);
+        }
+      });
+      setLikeCounts(nextLikes);
+      setCommentCounts(nextComments);
+
       if (user) {
-        const liked = await Promise.all(result.posts.map(async post =>
+        const likedResults = await Promise.allSettled(result.posts.map(async post =>
           (await getDoc(doc(db, 'communityPosts', post.id, 'likes', user.uid))).exists() ? post.id : null));
-        setLikedIds(liked.filter((id): id is string => Boolean(id)));
+        setLikedIds(likedResults.flatMap(item => item.status === 'fulfilled' && item.value ? [item.value] : []));
+        likedResults.filter(item => item.status === 'rejected').forEach(item => console.error('Community like state could not be loaded:', item.reason));
       } else setLikedIds([]);
-    } catch {
-      setError('We couldn’t load the community posts. Please refresh and try again.');
+    } catch (err) {
+      console.error('Community feed request failed:', err);
+      const code = (err as { code?: string })?.code;
+      setError(code === 'failed-precondition'
+        ? 'The Community feed needs a Firestore index. Please contact the site administrator.'
+        : code === 'permission-denied'
+          ? 'Access to Community posts was denied. Please check the Firestore security rules.'
+          : 'We couldn’t load the community posts. Please refresh and try again.');
     } finally { setLoading(false); }
   }, [user]);
 
@@ -223,11 +245,11 @@ export function CommunityFeed() {
                     <button type="button" onClick={() => void handleLike(post.id)} disabled={busyLikeId === post.id} aria-pressed={likedIds.includes(post.id)}
                       className={`inline-flex items-center gap-2 transition ${likedIds.includes(post.id) ? 'font-semibold text-[#9b4b52]' : 'text-[#77766f] hover:text-[#9b4b52]'}`}>
                       <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill={likedIds.includes(post.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7"><path d="M20.8 8.8c0 5.1-8.8 11-8.8 11s-8.8-5.9-8.8-11A4.7 4.7 0 0 1 12 6.2a4.7 4.7 0 0 1 8.8 2.6Z" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      Like <span>{likeCounts[post.id] || 0}</span>
+                      <span className="sr-only">Like</span><span>{likeCounts[post.id] || 0}</span>
                     </button>
                     <button type="button" onClick={() => setActivePost(post)} className="inline-flex items-center gap-2 text-[#77766f] transition hover:text-[#8b6536]">
                       <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M20 11.5a8 8 0 0 1-8 8H5l1.7-3.1A8 8 0 1 1 20 11.5Z" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      Comment <span>{commentCounts[post.id] || 0}</span>
+                      <span className="sr-only">Comment</span><span>{commentCounts[post.id] || 0}</span>
                     </button>
                   </div>
                   {user?.uid !== post.authorUid && <button type="button" onClick={() => void handleReport(post.id)} className="mt-3 text-[11px] text-muted hover:text-[#9b4b52]">Report</button>}
