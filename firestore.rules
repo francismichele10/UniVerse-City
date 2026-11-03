@@ -29,8 +29,7 @@ service cloud.firestore {
 
     match /communityProfiles/{uid} {
       allow read: if true;
-      allow create: if request.auth != null
-        && request.auth.uid == uid
+      allow create: if request.auth != null && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['uid', 'displayName', 'username', 'photoURL', 'verified', 'createdAt', 'updatedAt'])
         && request.resource.data.uid == uid
         && request.resource.data.displayName is string
@@ -72,18 +71,12 @@ service cloud.firestore {
     }
 
     match /interviews/{interviewId} {
-      // Visitors can only read published interviews. Admins can manage drafts too.
       allow read: if resource.data.status == 'published' || isAdmin();
       allow create, update, delete: if isAdmin();
     }
 
     match /posts/{postId} {
-      // Public users can only read posts marked as published.
-      // The application additionally filters out posts whose
-      // publishAt date has not yet arrived.
       allow read: if resource.data.status == 'published' || isAdmin();
-
-      // Admins can manage all posts.
       allow create, update, delete: if isAdmin();
     }
 
@@ -96,8 +89,7 @@ service cloud.firestore {
 
     match /communityPosts/{postId}/likes/{uid} {
       allow read: if true;
-      allow create: if request.auth != null
-        && request.auth.uid == uid
+      allow create: if request.auth != null && request.auth.uid == uid
         && exists(/databases/$(database)/documents/communityPosts/$(postId))
         && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
         && request.resource.data.uid == uid
@@ -124,57 +116,60 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    match /{path=**}/reports/{reportId} {
-      allow read: if isAdmin();
-    }
-
-    match /moderationLogs/{logId} {
-      allow read: if isAdmin();
-      allow create: if isAdmin()
-        && request.resource.data.actorEmail == request.auth.token.email
-        && request.resource.data.action is string
-        && request.resource.data.targetUid is string
-        && request.resource.data.createdAt is timestamp;
-      allow update, delete: if false;
-    }
-
     match /communityPosts/{postId} {
-      // Community posts are public to read once published.
       allow read: if resource.data.status == 'published' || isAdmin();
-
-      // Readers must be signed in with the same Google/Firebase account used
-      // for article comments and likes. Posts are text-only and limited to 280 chars.
       allow create: if request.auth != null
         && canCreateCommunityPost()
         && exists(/databases/$(database)/documents/communityProfiles/$(request.auth.uid))
         && request.resource.data.authorName == get(/databases/$(database)/documents/communityProfiles/$(request.auth.uid)).data.displayName
         && request.resource.data.authorPhotoURL == get(/databases/$(database)/documents/communityProfiles/$(request.auth.uid)).data.photoURL
-        && request.resource.data.keys().hasOnly([
-          'text', 'authorUid', 'authorName', 'authorPhotoURL', 'status', 'createdAt'
-        ])
-        && request.resource.data.keys().hasAll([
-          'text', 'authorUid', 'authorName', 'authorPhotoURL', 'status', 'createdAt'
-        ])
+        && request.resource.data.keys().hasOnly(['text', 'authorUid', 'authorName', 'authorPhotoURL', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAll(['text', 'authorUid', 'authorName', 'authorPhotoURL', 'status', 'createdAt'])
         && request.resource.data.authorUid == request.auth.uid
         && request.resource.data.authorName is string
         && request.resource.data.authorName.size() > 0
         && request.resource.data.authorName.size() <= 100
-        && (request.resource.data.authorPhotoURL == null
-          || request.resource.data.authorPhotoURL is string)
+        && (request.resource.data.authorPhotoURL == null || request.resource.data.authorPhotoURL is string)
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 280
         && request.resource.data.status == 'published'
         && request.resource.data.createdAt is timestamp;
-
-      allow delete: if request.auth != null
-        && (resource.data.authorUid == request.auth.uid || isAdmin());
-
-      // Only administrators may change moderation status. Authors cannot
-      // rewrite identity, timestamps or content after publication.
+      allow delete: if request.auth != null && (resource.data.authorUid == request.auth.uid || isAdmin());
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
         && request.resource.data.status in ['published', 'hidden'];
+
+      match /comments/{commentId} {
+        allow read: if get(/databases/$(database)/documents/communityPosts/$(postId)).data.status == 'published' || isAdmin();
+        allow create: if request.auth != null && canCreateComment()
+          && exists(/databases/$(database)/documents/communityProfiles/$(request.auth.uid))
+          && request.resource.data.keys().hasOnly(['text', 'authorUid', 'authorName', 'authorPhotoURL', 'parentId', 'createdAt'])
+          && request.resource.data.keys().hasAll(['text', 'authorUid', 'authorName', 'authorPhotoURL', 'parentId', 'createdAt'])
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.authorName == get(/databases/$(database)/documents/communityProfiles/$(request.auth.uid)).data.displayName
+          && request.resource.data.authorPhotoURL == get(/databases/$(database)/documents/communityProfiles/$(request.auth.uid)).data.photoURL
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000
+          && (request.resource.data.parentId == null
+            || (request.resource.data.parentId is string
+              && exists(/databases/$(database)/documents/communityPosts/$(postId)/comments/$(request.resource.data.parentId))));
+        allow update: if request.auth != null && resource.data.authorUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+          && request.resource.data.text is string && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000;
+        allow delete: if request.auth != null && (resource.data.authorUid == request.auth.uid || isAdmin());
+
+        match /likes/{uid} {
+          allow read: if true;
+          allow create: if request.auth != null && request.auth.uid == uid
+            && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+            && request.resource.data.uid == uid && request.resource.data.createdAt is timestamp;
+          allow delete: if request.auth != null && request.auth.uid == uid;
+          allow update: if false;
+        }
+      }
     }
 
     match /media/{mediaId} {
@@ -197,53 +192,30 @@ service cloud.firestore {
 
     match /comments/{commentId} {
       allow read: if true;
-
-      allow create: if request.auth != null
-                     && canCreateComment()
-                     && request.resource.data.keys().hasOnly([
-                       'postId', 'postSlug', 'postTitle', 'authorUid',
-                       'authorName', 'authorPhotoURL', 'text', 'createdAt', 'parentId'
-                     ])
-                     && request.resource.data.keys().hasAll([
-                       'postId', 'postSlug', 'postTitle', 'authorUid',
-                       'authorName', 'authorPhotoURL', 'text', 'createdAt'
-                     ])
-                     && request.resource.data.authorUid == request.auth.uid
-                     && request.resource.data.authorName is string
-                     && request.resource.data.authorName.size() > 0
-                     && request.resource.data.authorName.size() <= 100
-                     && (request.resource.data.authorPhotoURL == null
-                       || request.resource.data.authorPhotoURL is string)
-                     && request.resource.data.postId is string
-                     && request.resource.data.postSlug is string
-                     && request.resource.data.postTitle is string
-                     && request.resource.data.text is string
-                     && request.resource.data.text.size() > 0
-                     && request.resource.data.text.size() <= 1000
-                     && request.resource.data.createdAt is timestamp
-                     && (!('parentId' in request.resource.data) || request.resource.data.parentId == null || (request.resource.data.parentId is string && exists(/databases/$(database)/documents/comments/$(request.resource.data.parentId)) && get(/databases/$(database)/documents/comments/$(request.resource.data.parentId)).data.postId == request.resource.data.postId));
-
-      allow delete: if request.auth != null
-                     && (
-                       resource.data.authorUid == request.auth.uid
-                       || isAdmin()
-                     );
-
-      allow update: if request.auth != null
-        && resource.data.authorUid == request.auth.uid
+      allow create: if request.auth != null && canCreateComment()
+        && request.resource.data.keys().hasOnly(['postId', 'postSlug', 'postTitle', 'authorUid', 'authorName', 'authorPhotoURL', 'text', 'createdAt', 'parentId'])
+        && request.resource.data.keys().hasAll(['postId', 'postSlug', 'postTitle', 'authorUid', 'authorName', 'authorPhotoURL', 'text', 'createdAt'])
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.authorName is string && request.resource.data.authorName.size() > 0 && request.resource.data.authorName.size() <= 100
+        && (request.resource.data.authorPhotoURL == null || request.resource.data.authorPhotoURL is string)
+        && request.resource.data.postId is string && request.resource.data.postSlug is string && request.resource.data.postTitle is string
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+        && request.resource.data.createdAt is timestamp
+        && (!('parentId' in request.resource.data) || request.resource.data.parentId == null
+          || (request.resource.data.parentId is string && exists(/databases/$(database)/documents/comments/$(request.resource.data.parentId))
+            && get(/databases/$(database)/documents/comments/$(request.resource.data.parentId)).data.postId == request.resource.data.postId));
+      allow delete: if request.auth != null && (resource.data.authorUid == request.auth.uid || isAdmin());
+      allow update: if request.auth != null && resource.data.authorUid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
-        && request.resource.data.text is string
-        && request.resource.data.text.size() > 0
-        && request.resource.data.text.size() <= 1000
-        && request.resource.data.editedAt is timestamp;
+        && request.resource.data.text is string && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 1000 && request.resource.data.editedAt is timestamp;
     }
 
     match /comments/{commentId}/likes/{uid} {
       allow read: if true;
       allow create: if request.auth != null && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
-        && request.resource.data.uid == uid
-        && request.resource.data.createdAt is timestamp;
+        && request.resource.data.uid == uid && request.resource.data.createdAt is timestamp;
       allow delete: if request.auth != null && request.auth.uid == uid;
       allow update: if false;
     }
