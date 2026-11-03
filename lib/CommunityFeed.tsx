@@ -250,27 +250,11 @@ export function CommunityFeed() {
   return (
     <div className="min-h-screen bg-[#fbf6ec]">
       <main className="mx-auto max-w-3xl px-4 pb-28 pt-5 sm:px-6 sm:pt-7">
-        <section className="mb-6 rounded-[24px] border border-[#eadfce] bg-[#fffaf2] p-3 shadow-[0_3px_14px_rgba(76,53,25,.06)] sm:p-4">
-          <div className="flex items-center gap-3">
+        <div className="mb-5 flex justify-end">
+          {authChecked && <div className="rounded-full border border-[#eadfce] bg-[#fffaf2] p-1 shadow-sm">
             <Avatar name={ownProfile?.displayName || user?.displayName || 'UniVerse-City member'} photoURL={ownProfile?.photoURL || user?.photoURL}/>
-            <button type="button" onClick={() => {
-              if (!user) { void handleSignIn(); return; }
-              if (!ownProfile) return;
-              setText(''); setComposerOpen(true);
-            }} className="flex min-h-[54px] min-w-0 flex-1 items-center rounded-full border border-[#eadfce] bg-[#fffdf9] px-5 text-left text-sm text-[#81786c] shadow-inner transition hover:border-[#c9ad7d]">
-              What’s on your mind?
-            </button>
-            <button type="button" onClick={() => {
-              if (!user) { void handleSignIn(); return; }
-              if (!ownProfile) return;
-              setText(''); setComposerOpen(true);
-            }} aria-label="Create a post" className="flex h-[54px] w-[62px] shrink-0 items-center justify-center rounded-[18px] bg-[#76501f] text-[#fffaf0] shadow-sm transition hover:bg-[#5f3f19]">
-              <QuillIcon/>
-            </button>
-          </div>
-          {authChecked && !user && <p className="px-2 pt-3 text-center text-xs text-[#8a7d6b]">Sign in with Google to post, like or comment.</p>}
-          {authChecked && user && !ownProfile && <p className="px-2 pt-3 text-center text-xs text-[#8a7d6b]">Loading your Community profile…</p>}
-        </section>
+          </div>}
+        </div>
 
         {notice && <p role="status" className="mb-4 rounded-xl border border-[#d8c7aa] bg-[#f6efdf] px-4 py-3 text-sm text-[#65491f]">{notice}<button type="button" onClick={() => setNotice('')} className="ml-2 font-semibold underline">Dismiss</button></p>}
         {error && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
@@ -332,7 +316,11 @@ export function CommunityFeed() {
         </footer>
       </main>
 
-      {authChecked && user && ownProfile && <button type="button" onClick={() => { setText(''); setComposerOpen(true); }} aria-label="Create a post"
+      {authChecked && <button type="button" onClick={() => {
+        if (!user) { void handleSignIn(); return; }
+        if (!ownProfile) return;
+        setEditingPost(null); setText(''); setComposerOpen(true);
+      }} aria-label="Create a post"
         className="fixed bottom-6 right-5 z-40 flex h-16 w-16 items-center justify-center rounded-full border border-[#d4bd98] bg-[#76501f] text-[#fffaf0] shadow-[0_8px_28px_rgba(70,48,22,.25)] transition hover:-translate-y-1 hover:bg-[#5f3f19] sm:bottom-8 sm:right-8 sm:h-[68px] sm:w-[68px]">
         <QuillIcon/>
       </button>}
