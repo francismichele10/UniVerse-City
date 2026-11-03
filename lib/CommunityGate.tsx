@@ -6,7 +6,7 @@ import { getCommunityProfile, refreshCommunityPhoto, type CommunityProfile } fro
 import { CommunityProfileSetup } from '@/lib/CommunityProfileSetup';
 import { CommunityFeed } from '@/lib/CommunityFeed';
 import { db } from '@/lib/firebase';
-import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore/lite';
+import { collection, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore/lite';
 import type { Timestamp } from 'firebase/firestore/lite';
 
 type Restriction = { reason: string; mode: 'full' | 'post' | 'comment'; active: boolean; expiresAt: Timestamp | null };
