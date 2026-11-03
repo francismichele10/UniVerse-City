@@ -1,7 +1,7 @@
 'use client';
 
 export function VerificationBadge({
-  className = 'inline-block h-4 w-4 align-[-0.18em] shrink-0',
+  className = 'inline-block h-4 w-4 -ml-1 align-[-0.18em] shrink-0',
 }: {
   className?: string;
 }) {
