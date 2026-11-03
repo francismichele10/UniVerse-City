@@ -77,7 +77,7 @@ export function CommunityFeed() {
           getDocs(collection(db, 'communityPosts', post.id, 'likes')),
           getDocs(collection(db, 'communityPosts', post.id, 'comments')),
         ]);
-        return [post.id, likes.size, comments.docs.filter(item => !item.data().parentId).length] as const;
+        return [post.id, likes.size, comments.size] as const;
       }));
       const nextLikes: Record<string, number> = {};
       const nextComments: Record<string, number> = {};
@@ -282,14 +282,14 @@ export function CommunityFeed() {
         </section>
       </div>}
 
-      {activePost && <CommentDrawer post={activePost} profile={profiles[activePost.authorUid]} user={user} ownProfile={ownProfile} onClose={() => setActivePost(null)} onSignIn={handleSignIn}/>}
+      {activePost && <CommentDrawer post={activePost} profile={profiles[activePost.authorUid]} user={user} ownProfile={ownProfile} onClose={() => setActivePost(null)} onSignIn={handleSignIn} onCommentAdded={() => setCommentCounts(current => ({ ...current, [activePost.id]: (current[activePost.id] || 0) + 1 }))}/>}
     </div>
   );
 }
 
-function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn }: {
+function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn, onCommentAdded }: {
   post: CommunityPost; profile?: CommunityProfile; user: User | null; ownProfile: CommunityProfile | null;
-  onClose: () => void; onSignIn: () => Promise<void>;
+  onClose: () => void; onSignIn: () => Promise<void>; onCommentAdded: () => void;
 }) {
   const [size, setSize] = useState<'half' | 'full'>('half');
   const [comments, setComments] = useState<CommunityComment[]>([]);
@@ -344,6 +344,7 @@ function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn }: {
         text: draft.trim().slice(0, 1000), authorUid: user.uid, authorName: ownProfile.displayName,
         authorPhotoURL: ownProfile.photoURL, parentId: replyTo?.id || null, createdAt: serverTimestamp(),
       });
+      onCommentAdded();
       setDraft(''); setReplyTo(null); await loadComments();
     } catch { setError('Your comment could not be published. Please try again.'); }
     finally { setSending(false); }
@@ -361,13 +362,13 @@ function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn }: {
 
   function renderComment(comment: CommunityComment, isReply = false) {
     const children = replies.filter(reply => reply.parentId === comment.id);
-    return <div key={comment.id} className={isReply ? 'ml-9 border-l border-[#e9e2d6] pl-3 sm:ml-11 sm:pl-4' : ''}>
-      <div className="flex gap-2.5 py-3">
+    return <div key={comment.id} className={isReply ? 'ml-5 border-l border-[#e9e2d6] pl-2 sm:ml-7 sm:pl-3' : ''}>
+      <div className={isReply ? 'flex gap-2 py-1.5' : 'flex gap-2.5 py-2.5'}>
         <Avatar name={comment.authorName} photoURL={comment.authorPhotoURL} size="small"/>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"><span className="break-words text-[13px] font-semibold text-ink">{comment.authorName}</span><span className="text-[10px] text-muted">{formatRelativeTime(comment.createdAt)}</span></div>
-          <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-6 text-[#45443e]">{comment.text}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-4 text-[11px] text-muted">
+          <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-5 text-[#45443e]">{comment.text}</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[11px] text-muted">
             <button onClick={() => void toggleCommentLike(comment)} className={myLikes.includes(comment.id) ? 'font-semibold text-[#9b4b52]' : 'hover:text-[#9b4b52]'}>{myLikes.includes(comment.id) ? 'Liked' : 'Like'}{commentLikes[comment.id] ? ` · ${commentLikes[comment.id]}` : ''}</button>
             {!isReply && <button onClick={() => { setReplyTo(comment); setDraft(''); document.getElementById('community-comment-input')?.focus(); }} className="hover:text-[#8b6536]">Reply</button>}
           </div>
