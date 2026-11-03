@@ -25,6 +25,7 @@ export interface CommunityPost {
   authorName: string;
   authorPhotoURL: string | null;
   createdAt: unknown;
+  editedAt?: unknown;
   status: 'published' | 'hidden';
 }
 
