@@ -64,7 +64,6 @@ export function CommunityFeed() {
   const [likedIds, setLikedIds] = useState<string[]>([]);
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
-  const [busyLikeId, setBusyLikeId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [profiles, setProfiles] = useState<Record<string, CommunityProfile>>({});
   const [ownProfile, setOwnProfile] = useState<CommunityProfile | null>(null);
@@ -161,8 +160,6 @@ export function CommunityFeed() {
 
   async function handleLike(postId: string) {
     if (!user) { await handleSignIn(); return; }
-    if (busyLikeId) return;
-    setBusyLikeId(postId);
     const ref = doc(db, 'communityPosts', postId, 'likes', user.uid);
     const wasLiked = likedIds.includes(postId);
     setLikedIds(ids => wasLiked ? ids.filter(id => id !== postId) : [...ids, postId]);
@@ -174,7 +171,7 @@ export function CommunityFeed() {
       setLikedIds(ids => wasLiked ? [...ids, postId] : ids.filter(id => id !== postId));
       setLikeCounts(counts => ({ ...counts, [postId]: Math.max(0, (counts[postId] || 0) + (wasLiked ? 1 : -1)) }));
       setError('Your like could not be saved. Please try again.');
-    } finally { setBusyLikeId(null); }
+    }
   }
 
   async function handleReport() {
@@ -200,7 +197,13 @@ export function CommunityFeed() {
       setPosts(current => current.map(post => post.id === editingPost.id ? { ...post, text: updatedText, editedAt: new Date() } : post));
       setComposerOpen(false); setEditingPost(null); setText('');
       setNotice('Your post has been updated.');
-    } catch { setError('Your post could not be edited. Please try again.'); }
+    } catch (err) {
+      console.error('Community post edit failed:', err);
+      const code = (err as { code?: string })?.code;
+      setError(code === 'permission-denied'
+        ? 'Firestore blocked this edit. The latest firestore.rules must be published in Firebase Console before post editing will work.'
+        : 'Your post could not be edited. Please try again.');
+    }
     finally { setPublishing(false); }
   }
 
@@ -279,11 +282,15 @@ export function CommunityFeed() {
               <div className="flex items-start gap-3">
                 <Avatar name={post.authorName} photoURL={post.authorPhotoURL}/>
                 <div className="min-w-0 flex-1 pt-0.5">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="break-words text-[15px] font-semibold text-[#302113]">{profiles[post.authorUid]?.displayName || post.authorName}</span>
-                    {profiles[post.authorUid]?.verified && <VerificationBadge className="inline-block h-4 w-4"/>}
-                    {profiles[post.authorUid]?.username && <Link href={'/community/u/'+profiles[post.authorUid].username} className="max-w-full break-all text-[13px] text-[#857969] hover:underline">@{profiles[post.authorUid].username}</Link>}
-                    <span className="text-[13px] text-[#978b7a]">· {formatRelativeTime(post.createdAt)}</span>
+                  <div className="flex min-w-0 flex-col items-start gap-0.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <span className="break-words text-[15px] font-semibold text-[#302113]">{profiles[post.authorUid]?.displayName || post.authorName}</span>
+                      {profiles[post.authorUid]?.verified && <VerificationBadge className="inline-block h-4 w-4"/>}
+                    </div>
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+                      {profiles[post.authorUid]?.username && <Link href={'/community/u/'+profiles[post.authorUid].username} className="max-w-full break-all text-[13px] text-[#857969] hover:underline">@{profiles[post.authorUid].username}</Link>}
+                      <span className="text-[13px] text-[#978b7a] sm:before:content-['·'] sm:before:mr-2">{formatRelativeTime(post.createdAt)}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="relative">
@@ -301,12 +308,12 @@ export function CommunityFeed() {
               {Boolean(post.editedAt) && <span className="mt-2 inline-block text-[11px] italic text-[#978b7a]">Edited</span>}
 
               <div className="mt-5 flex items-center justify-between border-t border-[#eee3d3] pt-3">
-                <button type="button" onClick={() => void handleLike(post.id)} disabled={busyLikeId === post.id} aria-pressed={likedIds.includes(post.id)}
+                <button type="button" onClick={() => void handleLike(post.id)} aria-pressed={likedIds.includes(post.id)}
                   className={`inline-flex min-w-[76px] items-center gap-2 rounded-full px-2 py-1.5 text-sm transition ${likedIds.includes(post.id) ? 'font-semibold text-[#8b4a37]' : 'text-[#76501f] hover:bg-[#f7efe3]'}`}>
                   <svg viewBox="0 0 24 24" className="h-6 w-6" fill={likedIds.includes(post.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7"><path d="M20.8 8.8c0 5.1-8.8 11-8.8 11s-8.8-5.9-8.8-11A4.7 4.7 0 0 1 12 6.2a4.7 4.7 0 0 1 8.8 2.6Z" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   <span>{likeCounts[post.id] || 0}</span>
                 </button>
-                <button type="button" onClick={() => setActivePost(post)} className="inline-flex min-w-[76px] items-center gap-2 rounded-full px-2 py-1.5 text-sm text-[#76501f] transition hover:bg-[#f7efe3]">
+                <button type="button" onClick={event => { setActivePost(post); event.currentTarget.blur(); }} className="inline-flex min-w-[76px] items-center gap-2 rounded-full px-2 py-1.5 text-sm text-[#76501f] transition hover:bg-[#f7efe3] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a9813f]">
                   <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M20 11.5a8 8 0 0 1-8 8H5l1.7-3.1A8 8 0 1 1 20 11.5Z" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   <span>{commentCounts[post.id] || 0}</span>
                 </button>
@@ -347,7 +354,7 @@ export function CommunityFeed() {
         </section>
       </div>}
 
-      {activePost && <CommentDrawer post={activePost} profile={profiles[activePost.authorUid]} user={user} ownProfile={ownProfile} onClose={() => setActivePost(null)} onSignIn={handleSignIn} onCommentAdded={() => setCommentCounts(current => ({ ...current, [activePost.id]: (current[activePost.id] || 0) + 1 }))}/>}
+      {activePost && <CommentDrawer post={activePost} profile={profiles[activePost.authorUid]} user={user} ownProfile={ownProfile} onClose={() => { setActivePost(null); if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }} onSignIn={handleSignIn} onCommentAdded={() => setCommentCounts(current => ({ ...current, [activePost.id]: (current[activePost.id] || 0) + 1 }))}/>}
     </div>
   );
 }
