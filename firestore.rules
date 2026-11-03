@@ -94,6 +94,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /restrictionWelcomeBack/{uid} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (request.auth != null && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenEventId'])
+        && request.resource.data.seenEventId == resource.data.eventId);
+    }
+
     match /accountRestrictions/{uid} {
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
       allow create, update, delete: if isAdmin();
