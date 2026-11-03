@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import {
-  addDoc, collection, doc, getDocs, limit, orderBy, query, serverTimestamp, updateDoc,
+  addDoc, collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, updateDoc,
 } from 'firebase/firestore/lite';
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebaseAuth';
@@ -16,6 +16,9 @@ type Report = {
   status?: string;
   createdAt?: { toDate?: () => Date } | null;
   postId: string;
+  reportedUid?: string;
+  reportedName?: string;
+  reportedUsername?: string;
 };
 
 export default function AdminReportsPage() {
@@ -37,6 +40,26 @@ export default function AdminReportsPage() {
       ));
 
       const reportGroups = await Promise.all(posts.docs.map(async (post) => {
+        const postData = post.data();
+        const reportedUid = typeof postData.authorUid === 'string' ? postData.authorUid : '';
+        let reportedName = typeof postData.authorName === 'string' ? postData.authorName : 'Unknown account';
+        let reportedUsername = '';
+
+        // The reported account is the author of the post that the report belongs to.
+        // Enrich the post's author details with their public Community profile.
+        if (reportedUid) {
+          try {
+            const profile = await getDoc(doc(db, 'communityProfiles', reportedUid));
+            if (profile.exists()) {
+              const profileData = profile.data();
+              reportedName = profileData.displayName || reportedName;
+              reportedUsername = profileData.username || '';
+            }
+          } catch {
+            // Keep the author details already stored on the post if profile lookup fails.
+          }
+        }
+
         const reports = await getDocs(query(
           collection(db, 'communityPosts', post.id, 'reports'),
           orderBy('createdAt', 'desc'),
@@ -44,6 +67,9 @@ export default function AdminReportsPage() {
         return reports.docs.map((entry) => ({
           id: entry.id,
           postId: post.id,
+          reportedUid,
+          reportedName,
+          reportedUsername,
           ...entry.data(),
         }) as Report);
       }));
@@ -99,8 +125,8 @@ export default function AdminReportsPage() {
       await addDoc(collection(db, 'moderationLogs'), {
         actorEmail: auth.currentUser?.email || '',
         action: 'report_reviewed',
-        targetUid: report.reporterUid || 'unknown',
-        reason: `Reviewed report on Community post ${report.postId}: ${report.reason || 'No reason supplied'}`,
+        targetUid: report.reportedUid || 'unknown',
+        reason: `Reviewed report on Community post ${report.postId} against ${report.reportedName || 'unknown account'} (${report.reportedUid || 'unknown UID'}). Reporter: ${report.reporterUid || 'unknown'}. Reason: ${report.reason || 'No reason supplied'}`,
         createdAt: serverTimestamp(),
       });
       setItems((current) => current.map((item) => item.id === report.id && item.postId === report.postId
@@ -129,7 +155,12 @@ export default function AdminReportsPage() {
             <span className="text-[10px] text-[#96938a]">{item.createdAt?.toDate?.().toLocaleString() || 'Date unavailable'}</span>
           </div>
           <p className="mt-3 text-sm leading-6 text-[#343832]">{item.reason || 'No reason supplied.'}</p>
-          <p className="mt-2 break-all text-[10px] text-[#96938a]">Post ID: {item.postId} · Reporter UID: {item.reporterUid || 'Unknown'}</p>
+          <div className="mt-3 space-y-1.5 text-[11px] text-[#77766f]">
+            <p className="font-semibold text-[#343832]">Reported account: {item.reportedName || 'Unknown account'}{item.reportedUsername ? ` (@${item.reportedUsername})` : ''}</p>
+            <p className="break-all">Reported account UID: <span className="font-mono">{item.reportedUid || 'Unknown'}</span></p>
+            <p className="break-all">Reported by UID: <span className="font-mono">{item.reporterUid || 'Unknown'}</span></p>
+            <p className="break-all text-[10px] text-[#96938a]">Post ID: {item.postId}</p>
+          </div>
           {item.status !== 'reviewed' && <button onClick={() => void resolve(item)} className="mt-3 text-[10px] font-bold text-[#765a35] underline underline-offset-4">Mark as reviewed</button>}
         </article>)}</div>}
     </section>
