@@ -174,6 +174,11 @@ describe('Community Firestore security rules', () => {
       actorEmail: 'admin@example.com', action: 'community_post_hidden',
       targetUid: 'student-uid-001', reason: 'Test moderation action', createdAt: serverTimestamp(),
     }));
+    await assertSucceeds(setDoc(doc(admin, 'moderationLogs', 'restriction-log'), {
+      actorEmail: 'admin@example.com', action: 'restriction_applied',
+      targetUid: 'student-uid-001', reason: 'Repeated guideline violations',
+      mode: 'full', expiresAt: null, createdAt: serverTimestamp(),
+    }));
     await assertFails(setDoc(doc(owner, 'moderationLogs', 'student-log'), {
       actorEmail: 'student@example.com', action: 'forged_action',
       targetUid: 'student-uid-001', createdAt: serverTimestamp(),
