@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
   addDoc, collection, deleteDoc, doc, getDocs, limit, orderBy, query, serverTimestamp, startAfter, updateDoc,
   type DocumentData, type QueryDocumentSnapshot,
@@ -63,7 +64,16 @@ export default function AdminCommunityPage() {
     }
   }, [cursor, hasMore, loadingMore]);
 
-  useEffect(() => { void load(false); }, []); // Initial page only; refresh is explicit.
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) void load(false);
+      else {
+        setLoading(false);
+        setError('Sign in with an administrator account to review Community reports.');
+      }
+    });
+    return () => unsubscribe();
+  }, [load]); // Load only after Firebase has resolved the admin session.
 
   const visiblePosts = useMemo(() => posts.filter((post) => {
     const matchesStatus = filter === 'all' || post.status === filter;
