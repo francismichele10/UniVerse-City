@@ -368,10 +368,15 @@ function CommentDrawer({ post, profile, user, ownProfile, onClose, onSignIn, onC
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"><span className="break-words text-[13px] font-semibold text-ink">{comment.authorName}</span><span className="text-[10px] text-muted">{formatRelativeTime(comment.createdAt)}</span></div>
           <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-5 text-[#45443e]">{comment.text}</p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[11px] text-muted">
-            <button onClick={() => void toggleCommentLike(comment)} className={myLikes.includes(comment.id) ? 'font-semibold text-[#9b4b52]' : 'hover:text-[#9b4b52]'}>{myLikes.includes(comment.id) ? 'Liked' : 'Like'}{commentLikes[comment.id] ? ` · ${commentLikes[comment.id]}` : ''}</button>
+          <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted">
             {!isReply && <button onClick={() => { setReplyTo(comment); setDraft(''); document.getElementById('community-comment-input')?.focus(); }} className="hover:text-[#8b6536]">Reply</button>}
           </div>
+        </div>
+        <div className="flex w-7 shrink-0 flex-col items-center pt-1">
+          <button type="button" onClick={() => void toggleCommentLike(comment)} aria-label={myLikes.includes(comment.id) ? 'Unlike comment' : 'Like comment'} aria-pressed={myLikes.includes(comment.id)} className={`rounded-full p-1 transition-colors ${myLikes.includes(comment.id) ? 'text-[#e25563]' : 'text-[#9b9a94] hover:text-[#e25563]'}`}>
+            <svg viewBox="0 0 24 24" className="h-[17px] w-[17px]" fill={myLikes.includes(comment.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.8 8.8c0 5.1-8.8 11-8.8 11s-8.8-5.9-8.8-11A4.7 4.7 0 0 1 12 6.2a4.7 4.7 0 0 1 8.8 2.6Z"/></svg>
+          </button>
+          {commentLikes[comment.id] > 0 && <span className="text-[10px] leading-3 text-muted">{commentLikes[comment.id]}</span>}
         </div>
       </div>
       {children.map(reply => renderComment(reply, true))}
