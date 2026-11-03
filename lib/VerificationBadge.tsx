@@ -1,26 +1,29 @@
 'use client';
 
-const BROWN_CHECKMARK_SVG =
-  'https://commons.wikimedia.org/wiki/Special:Redirect/file/Eo_circle_brown_checkmark.svg';
-
-export function VerificationBadge({ className = 'inline-block h-4 w-4' }: { className?: string }) {
+export function VerificationBadge({
+  className = 'inline-block h-4 w-4 align-[-0.18em] shrink-0',
+}: {
+  className?: string;
+}) {
   return (
-    <img
-      src={BROWN_CHECKMARK_SVG}
-      alt="Verified account"
+    <svg
+      aria-label="Verified account"
       role="img"
-      title="Verified account"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
       className={className}
-      loading="lazy"
-      decoding="async"
-    />
+      focusable="false"
+    >
+      <circle cx="12" cy="12" r="10.5" fill="#8A5A32" />
+      <circle cx="12" cy="12" r="9.35" stroke="#D9B27C" strokeWidth="0.8" />
+      <path
+        d="M7.25 12.15L10.35 15.2L16.85 8.85"
+        stroke="#FFFDF8"
+        strokeWidth="2.15"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
-
-/*
- * Badge artwork: "Eo circle brown checkmark.svg"
- * Author: Emoji One contributors
- * Source: https://commons.wikimedia.org/wiki/File:Eo_circle_brown_checkmark.svg
- * License: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
- * The original SVG is used without modification.
- */
