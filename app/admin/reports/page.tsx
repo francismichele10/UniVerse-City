@@ -19,6 +19,8 @@ type Report = {
   reportedUid?: string;
   reportedName?: string;
   reportedUsername?: string;
+  reporterName?: string;
+  reporterUsername?: string;
 };
 
 export default function AdminReportsPage() {
@@ -64,14 +66,37 @@ export default function AdminReportsPage() {
           collection(db, 'communityPosts', post.id, 'reports'),
           orderBy('createdAt', 'desc'),
         ));
-        return reports.docs.map((entry) => ({
-          id: entry.id,
-          postId: post.id,
-          reportedUid,
-          reportedName,
-          reportedUsername,
-          ...entry.data(),
-        }) as Report);
+        return Promise.all(reports.docs.map(async (entry) => {
+          const reportData = entry.data();
+          const reporterUid = typeof reportData.reporterUid === 'string' ? reportData.reporterUid : '';
+          let reporterName = 'Unknown account';
+          let reporterUsername = '';
+
+          if (reporterUid) {
+            try {
+              const reporterProfile = await getDoc(doc(db, 'communityProfiles', reporterUid));
+              if (reporterProfile.exists()) {
+                const profileData = reporterProfile.data();
+                reporterName = profileData.displayName || reporterName;
+                reporterUsername = profileData.username || '';
+              }
+            } catch {
+              // Keep the UID visible if the reporter's public profile cannot be loaded.
+            }
+          }
+
+          return {
+            id: entry.id,
+            postId: post.id,
+            reportedUid,
+            reportedName,
+            reportedUsername,
+            reporterUid,
+            reporterName,
+            reporterUsername,
+            ...reportData,
+          } as Report;
+        }));
       }));
 
       const allReports = reportGroups.flat();
@@ -158,7 +183,8 @@ export default function AdminReportsPage() {
           <div className="mt-3 space-y-1.5 text-[11px] text-[#77766f]">
             <p className="font-semibold text-[#343832]">Reported account: {item.reportedName || 'Unknown account'}{item.reportedUsername ? ` (@${item.reportedUsername})` : ''}</p>
             <p className="break-all">Reported account UID: <span className="font-mono">{item.reportedUid || 'Unknown'}</span></p>
-            <p className="break-all">Reported by UID: <span className="font-mono">{item.reporterUid || 'Unknown'}</span></p>
+            <p className="mt-2 font-semibold text-[#343832]">Reported by: {item.reporterName || 'Unknown account'}{item.reporterUsername ? ` (@${item.reporterUsername})` : ''}</p>
+            <p className="break-all">Reporter UID: <span className="font-mono">{item.reporterUid || 'Unknown'}</span></p>
             <p className="break-all text-[10px] text-[#96938a]">Post ID: {item.postId}</p>
           </div>
           {item.status !== 'reviewed' && <button onClick={() => void resolve(item)} className="mt-3 text-[10px] font-bold text-[#765a35] underline underline-offset-4">Mark as reviewed</button>}
