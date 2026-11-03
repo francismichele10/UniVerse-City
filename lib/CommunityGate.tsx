@@ -11,6 +11,7 @@ import type { Timestamp } from 'firebase/firestore/lite';
 
 type Restriction = { reason: string; mode: 'full' | 'post' | 'comment'; active: boolean; expiresAt: Timestamp | null };
 type Appeal = { status: 'pending' | 'approved' | 'rejected'; message: string; createdAt?: Timestamp; decisionNote?: string };
+type WelcomeBackEvent = { eventId: string; seenEventId?: string | null };
 function activeRestriction(item: Restriction | null) {
   return Boolean(item?.active && (!item.expiresAt || item.expiresAt.toDate().getTime() > Date.now()));
 }
@@ -20,6 +21,8 @@ export function CommunityGate() {
  const [profile,setProfile]=useState<CommunityProfile|null>(null);
  const [checked,setChecked]=useState(false);
  const [welcome,setWelcome]=useState(false);
+ const [welcomeBackEvent,setWelcomeBackEvent]=useState<WelcomeBackEvent|null>(null);
+ const [showWelcomeBack,setShowWelcomeBack]=useState(false);
  const [restriction,setRestriction]=useState<Restriction|null>(null);
  const [appeal,setAppeal]=useState<Appeal|null>(null);
  const [appealText,setAppealText]=useState('');
@@ -28,14 +31,15 @@ export function CommunityGate() {
  const [restrictionChecked,setRestrictionChecked]=useState(false);
 
  useEffect(()=>watchReaderAuth(u=>{
-   setUser(u); setRestriction(null); setAppeal(null); setRestrictionChecked(!u);
+   setUser(u); setRestriction(null); setAppeal(null); setWelcomeBackEvent(null); setShowWelcomeBack(false); setRestrictionChecked(!u);
    if(!u){setProfile(null);setChecked(true);return;}
    setChecked(false);
    Promise.all([
      refreshCommunityPhoto(u.uid,u.photoURL).catch(()=>getCommunityProfile(u.uid).catch(()=>null)),
      getDoc(doc(db,'accountRestrictions',u.uid)).then(s=>s.exists()?s.data() as Restriction:null).catch(()=>null),
      getDoc(doc(db,'restrictionAppeals',u.uid)).then(s=>s.exists()?s.data() as Appeal:null).catch(()=>null),
-   ]).then(([p,r,a])=>{setProfile(p as CommunityProfile|null);setRestriction(r as Restriction|null);setAppeal(a as Appeal|null);})
+     getDoc(doc(db,'restrictionWelcomeBack',u.uid)).then(s=>s.exists()?s.data() as WelcomeBackEvent:null).catch(()=>null),
+   ]).then(([p,r,a,w])=>{setProfile(p as CommunityProfile|null);setRestriction(r as Restriction|null);setAppeal(a as Appeal|null);setWelcomeBackEvent(w as WelcomeBackEvent|null);})
     .finally(()=>{setChecked(true);setRestrictionChecked(true);});
  }),[]);
 
@@ -69,6 +73,14 @@ export function CommunityGate() {
    finally{setSubmitting(false);}
  }
  const blocked=restrictionChecked&&activeRestriction(restriction)&&restriction?.mode==='full';
+ useEffect(()=>{
+   if(!checked||!restrictionChecked||!user||!profile||blocked||!welcomeBackEvent?.eventId||welcomeBackEvent.seenEventId===welcomeBackEvent.eventId)return;
+   setShowWelcomeBack(true);
+   setWelcomeBackEvent(current=>current?{...current,seenEventId:current.eventId}:current);
+   void updateDoc(doc(db,'restrictionWelcomeBack',user.uid),{seenEventId:welcomeBackEvent.eventId}).catch(()=>{
+     setWelcomeBackEvent(current=>current?{...current,seenEventId:null}:current);
+   });
+ },[checked,restrictionChecked,user,profile,blocked,welcomeBackEvent]);
  useEffect(()=>{
    if(!blocked)return;
    const scrollY=window.scrollY;
@@ -119,10 +131,11 @@ export function CommunityGate() {
          <textarea id="restriction-appeal" value={appealText} onChange={e=>setAppealText(e.target.value.slice(0,1500))} rows={3} maxLength={1500} placeholder="Explain why you believe this restriction should be reviewed…" className="mt-2 w-full rounded-xl border border-[#e5ddce] bg-white p-3 text-sm text-[#30251b] outline-none focus:border-[#a9813f]"/>
          <div className="mt-1 flex justify-between text-[10px] text-[#978b7a]"><span>Be respectful and include any helpful context.</span><span>{appealText.length}/1500</span></div>
          {appealError&&<p role="alert" className="mt-3 text-xs text-red-700">{appealError}</p>}
-         <button onClick={()=>void submitAppeal()} disabled={!appealText.trim()||submitting} className="mt-4 w-full rounded-full bg-[#76501f] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{submitting?'Submitting…':'Submit appeal'}</button>
+         <button onClick={()=>void submitAppeal()} disabled={!appealText.trim()||submitting} className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-[#76501f] px-5 py-3 text-sm font-semibold leading-none text-white shadow-[0_4px_0_#4f3515] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#89612b] hover:shadow-[0_5px_0_#4f3515] active:translate-y-[2px] active:shadow-[0_2px_0_#4f3515] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a9813f] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none">{submitting?'Submitting…':'Submit appeal'}</button>
        </div>}
       </section>
    </div>}
+   {showWelcomeBack&&!blocked&&<div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#211b13]/60 px-5 py-6 backdrop-blur-sm"><section role="dialog" aria-modal="true" aria-labelledby="welcome-back-title" className="w-full max-w-md rounded-[26px] border border-[#d9c39d] bg-[#fffdf8] px-7 py-8 text-center shadow-2xl sm:px-9 sm:py-10"><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#edf4e9] text-2xl text-[#426d48]">✓</div><p className="mt-4 text-[9px] font-bold uppercase tracking-[0.2em] text-[#a17b47]">Community access restored</p><h2 id="welcome-back-title" className="mt-2 font-serif text-3xl text-[#38291c]">Welcome back!</h2><p className="mt-3 text-sm leading-6 text-[#766b5c]">Your appeal has been approved or your restriction has been lifted. Your Community access has been restored. You’re welcome to participate again.</p><button onClick={()=>setShowWelcomeBack(false)} className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#76501f] px-5 py-3 text-sm font-semibold text-white shadow-[0_4px_0_#4f3515] transition hover:-translate-y-0.5 hover:bg-[#89612b] active:translate-y-[2px] active:shadow-none">Continue to Community</button></section></div>}
    {welcome&&<div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#f8f3e8]/95 px-6 text-center"><div className="rounded-2xl border border-[#c9ad7d] bg-[#fffdf8] px-8 py-10 shadow-xl animate-[welcomeFade_2.6s_ease-in-out_forwards]"><p className="font-serif text-3xl leading-tight text-[#4b3925] sm:text-4xl">Welcome to UniVerse-City Community<span className="inline-block animate-bounce">!</span></p><p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9b7849]">Your conversation starts here</p></div></div>}
  </>;
 }
