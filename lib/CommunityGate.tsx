@@ -55,13 +55,39 @@ export function CommunityGate() {
    finally{setSubmitting(false);}
  }
  const blocked=restrictionChecked&&activeRestriction(restriction)&&restriction?.mode==='full';
+ useEffect(()=>{
+   if(!blocked)return;
+   const scrollY=window.scrollY;
+   const body=document.body;
+   const html=document.documentElement;
+   const previous={
+     bodyPosition:body.style.position,
+     bodyTop:body.style.top,
+     bodyWidth:body.style.width,
+     bodyOverflow:body.style.overflow,
+     htmlOverflow:html.style.overflow,
+   };
+   html.style.overflow='hidden';
+   body.style.position='fixed';
+   body.style.top=`-${scrollY}px`;
+   body.style.width='100%';
+   body.style.overflow='hidden';
+   return ()=>{
+     body.style.position=previous.bodyPosition;
+     body.style.top=previous.bodyTop;
+     body.style.width=previous.bodyWidth;
+     body.style.overflow=previous.bodyOverflow;
+     html.style.overflow=previous.htmlOverflow;
+     window.scrollTo(0,scrollY);
+   };
+ },[blocked]);
  if(!checked||!restrictionChecked)return <div className="mx-auto max-w-3xl px-5 py-8 text-sm text-muted">Checking your Community access…</div>;
  if(user&&!profile)return <div className="mx-auto max-w-3xl px-5 py-8"><CommunityProfileSetup uid={user.uid} displayName={user.displayName||''} photoURL={user.photoURL} onComplete={()=>void refresh()}/></div>;
  return <>
    <div className={blocked?'pointer-events-none select-none blur-[5px] opacity-50':''} aria-hidden={blocked}>
      <CommunityFeed/>
    </div>
-   {blocked&&<div className="fixed inset-0 z-[110] flex items-center justify-center overflow-hidden bg-[#211b13]/55 px-3 py-3 backdrop-blur-sm">
+   {blocked&&<div className="fixed inset-0 z-[110] flex items-center justify-center overflow-hidden overscroll-none bg-[#211b13]/55 px-3 py-3 backdrop-blur-sm">
      <section role="dialog" aria-modal="true" aria-labelledby="suspension-title" className="w-full max-w-lg max-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-[26px] border border-[#d9c39d] bg-[#fffdf8] p-4 shadow-2xl sm:p-8">
        <div className="mx-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5e9e4] text-xl text-[#985247] sm:h-14 sm:w-14 sm:text-2xl">!</div>
        <p className="mt-3 text-center text-[9px] font-bold uppercase tracking-[.2em] text-[#a17b47] sm:mt-5">Community access notice</p>
