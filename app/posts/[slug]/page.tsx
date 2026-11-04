@@ -6,6 +6,9 @@ import { Comments } from '@/lib/CommentsSection';
 import { LikeButton } from '@/lib/LikeButton';
 import { formatDate } from '@/lib/date';
 import { ViewTracker } from '@/lib/ViewTracker';
+import { ArticlePollCard } from '@/lib/ArticlePollCard';
+import type { ArticlePoll } from '@/lib/types';
+import type { ReactNode } from 'react';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +42,26 @@ function formatOldHashtags(html: string): string {
   return processed.replace(/___HASHTAG_BLUE_(\d+)___/g, (_, index) => protectedHashtags[Number(index)]);
 }
 
+
+function renderBodyWithPolls(body: string, polls: Record<string, ArticlePoll> | undefined, postId: string): ReactNode[] {
+  const marker = /<div\\b(?=[^>]*data-article-poll)(?=[^>]*data-poll-id=["']([^"']+)["'])[^>]*>[\\s\\S]*?<\\/div>/gi;
+  const output: ReactNode[] = [];
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+  while ((match = marker.exec(body)) !== null) {
+    if (match.index > cursor) {
+      output.push(<div key={`body-${cursor}`} dangerouslySetInnerHTML={{ __html: formatOldHashtags(body.slice(cursor, match.index)) }} />);
+    }
+    const poll = polls?.[match[1]];
+    if (poll) output.push(<ArticlePollCard key={`poll-${poll.id}`} postId={postId} poll={poll} />);
+    cursor = match.index + match[0].length;
+  }
+  if (cursor < body.length) {
+    output.push(<div key={`body-${cursor}`} dangerouslySetInnerHTML={{ __html: formatOldHashtags(body.slice(cursor)) }} />);
+  }
+  return output;
+}
+
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
@@ -62,7 +85,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             </figure>
           )}
 
-          <div className="post-body mt-8 text-[16px] leading-8 text-[#2b2f2c]" dangerouslySetInnerHTML={{ __html: formatOldHashtags(post.body) }} />
+          <div className="post-body mt-8 text-[16px] leading-8 text-[#2b2f2c]">{renderBodyWithPolls(post.body, post.polls, post.id)}</div>
 
           {post.tags.length > 0 && (
             <div className="mt-8 border-t border-rule pt-5">
