@@ -24,7 +24,8 @@ import {
 } from '@/lib/posts';
 import { getSettings } from '@/lib/settings';
 import { toDate } from '@/lib/date';
-import type { PostStatus } from '@/lib/types';
+import type { ArticlePoll, PostStatus } from '@/lib/types';
+import { ArticlePollNode } from '@/lib/ArticlePollNode';
 
 const EmojiPicker = dynamic(
   () => import('emoji-picker-react'),
@@ -73,6 +74,7 @@ function NewPostForm() {
       AutoLinkMark,
       HashtagMark,
       LineSpacing,
+      ArticlePollNode,
     ],
     content: '',
     immediatelyRender: false,
@@ -98,6 +100,9 @@ function NewPostForm() {
     useState(false);
 
   const [lineSpacing, setLineSpacing] = useState('1.6');
+  const [poll, setPoll] = useState<ArticlePoll | null>(null);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
 
   // Categories still come from Settings.
   useEffect(() => {
@@ -120,6 +125,12 @@ function NewPostForm() {
       if (cancelled || !post) return;
 
       setTitle(post.title);
+      const savedPoll = post.polls ? Object.values(post.polls)[0] : null;
+      if (savedPoll) {
+        setPoll(savedPoll);
+        setPollQuestion(savedPoll.question);
+        setPollOptions(savedPoll.options.map((option) => option.text));
+      }
       setExcerpt(post.excerpt);
       setCategory(post.category);
       setAuthorName(post.authorName ?? '');
@@ -336,6 +347,7 @@ function NewPostForm() {
         slug: slugify(title),
         excerpt,
         body: preparedBody,
+        polls: poll ? { [poll.id]: { ...poll, question: pollQuestion.trim(), options: pollOptions.map((text, index) => ({ id: poll.options[index]?.id ?? crypto.randomUUID(), text: text.trim() })).filter((option) => option.text), optionIds: pollOptions.map((_, index) => poll?.options[index]?.id ?? '').filter(Boolean) } } : {},
         coverImageUrl,
         category,
         tags: tags
@@ -681,6 +693,39 @@ function NewPostForm() {
           picker with search, categories
           and skin tones.
         </p>
+      </div>
+
+      <div className="rounded-sm border border-rule bg-[#faf9f6] p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">Article poll</h2>
+            <p className="mt-1 text-xs text-muted">Add a WhatsApp-style poll anywhere in this article.</p>
+          </div>
+          {!poll && (
+            <button type="button" onClick={() => {
+              const id = crypto.randomUUID();
+              const nextPoll: ArticlePoll = { id, question: '', options: [{ id: crypto.randomUUID(), text: '' }, { id: crypto.randomUUID(), text: '' }], optionIds: [] };
+              setPoll(nextPoll);
+              editor?.chain().focus().insertContent({ type: 'articlePoll', attrs: { pollId: id } }).run();
+            }} className="border border-ink bg-ink px-3 py-2 text-xs font-medium text-paper">＋ Add poll</button>
+          )}
+        </div>
+        {poll && (
+          <div className="space-y-3">
+            <input value={pollQuestion} onChange={(event) => setPollQuestion(event.target.value)} maxLength={180} placeholder="Ask a question…" className="form-field" />
+            {pollOptions.map((option, index) => (
+              <div key={index} className="flex gap-2">
+                <input value={option} onChange={(event) => setPollOptions((current) => current.map((value, item) => item === index ? event.target.value : value))} maxLength={80} placeholder={`Option ${index + 1}`} className="form-field" />
+                {pollOptions.length > 2 && <button type="button" onClick={() => setPollOptions((current) => current.filter((_, item) => item !== index))} className="px-2 text-sm text-red-700" aria-label="Remove option">×</button>}
+              </div>
+            ))}
+            {pollOptions.length < 6 && <button type="button" onClick={() => setPollOptions((current) => [...current, ''])} className="text-xs font-medium text-[#80683d]">＋ Add option</button>}
+            <div className="flex items-center justify-between gap-3 border-t border-rule pt-3">
+              <p className="text-[11px] text-muted">Readers can change their vote. Maximum 6 options.</p>
+              <button type="button" onClick={() => { editor?.chain().focus().deleteNode('articlePoll').run(); setPoll(null); setPollQuestion(''); setPollOptions(['', '']); }} className="text-xs text-red-700">Remove poll</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
