@@ -154,11 +154,14 @@ service cloud.firestore {
           && request.resource.data.updatedAt is timestamp;
       }
       allow read: if get(/databases/$(database)/documents/posts/$(postId)).data.status == 'published' || isAdmin();
-      allow create, update: if request.auth != null
+      allow create: if request.auth != null
         && request.auth.uid == uid
         && exists(/databases/$(database)/documents/posts/$(postId))
+        && validPollVote();
+      allow update: if request.auth != null
+        && request.auth.uid == uid
         && validPollVote()
-        && (request.method != 'update' || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['optionId', 'updatedAt']));
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['optionId', 'updatedAt']);
       allow delete: if isAdmin();
     }
 
