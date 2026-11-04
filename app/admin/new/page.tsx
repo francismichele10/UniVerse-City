@@ -342,12 +342,17 @@ function NewPostForm() {
           editorHTML
         );
 
+      const finalPoll = poll ? (() => {
+        const options = pollOptions.map((text, index) => ({ id: poll.options[index]?.id ?? crypto.randomUUID(), text: text.trim() })).filter((option) => option.text);
+        return { ...poll, question: pollQuestion.trim(), options, optionIds: options.map((option) => option.id) };
+      })() : null;
+
       const payload = {
         title,
         slug: slugify(title),
         excerpt,
         body: preparedBody,
-        polls: poll ? { [poll.id]: { ...poll, question: pollQuestion.trim(), options: pollOptions.map((text, index) => ({ id: poll.options[index]?.id ?? crypto.randomUUID(), text: text.trim() })).filter((option) => option.text), optionIds: pollOptions.map((_, index) => poll?.options[index]?.id ?? '').filter(Boolean) } } : {},
+        polls: finalPoll ? { [finalPoll.id]: finalPoll } : {},
         coverImageUrl,
         category,
         tags: tags
@@ -722,7 +727,7 @@ function NewPostForm() {
             {pollOptions.length < 6 && <button type="button" onClick={() => setPollOptions((current) => [...current, ''])} className="text-xs font-medium text-[#80683d]">＋ Add option</button>}
             <div className="flex items-center justify-between gap-3 border-t border-rule pt-3">
               <p className="text-[11px] text-muted">Readers can change their vote. Maximum 6 options.</p>
-              <button type="button" onClick={() => { editor?.chain().focus().deleteNode('articlePoll').run(); setPoll(null); setPollQuestion(''); setPollOptions(['', '']); }} className="text-xs text-red-700">Remove poll</button>
+              <button type="button" onClick={() => { editor?.commands.command(({ tr, state }) => { const positions: number[] = []; state.doc.descendants((node, position) => { if (node.type.name === 'articlePoll') positions.push(position); }); positions.reverse().forEach((position) => tr.delete(position, position + 1)); return true; }); setPoll(null); setPollQuestion(''); setPollOptions(['', '']); }} className="text-xs text-red-700">Remove poll</button>
             </div>
           </div>
         )}
