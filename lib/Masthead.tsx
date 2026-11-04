@@ -173,6 +173,16 @@ export function Masthead({
                   Home
                 </Link>
 
+                {/* INTERVIEWS */}
+                <Link
+                  href="/interviews"
+                  className={`nav-link ${
+                    currentPage === 'interviews' ? 'nav-link-active' : ''
+                  }`}
+                >
+                  Interviews
+                </Link>
+
                 {/* CATEGORIES */}
                 {settings.categories.map((cat) => {
                   const isActive = currentCategory === cat;
@@ -200,16 +210,6 @@ export function Masthead({
                   }`}
                 >
                   Community
-                </Link>
-
-                {/* INTERVIEWS */}
-                <Link
-                  href="/interviews"
-                  className={`nav-link ${
-                    currentPage === 'interviews' ? 'nav-link-active' : ''
-                  }`}
-                >
-                  Interviews
                 </Link>
 
                 {/* ABOUT */}
