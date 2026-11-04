@@ -44,7 +44,7 @@ function formatOldHashtags(html: string): string {
 
 
 function renderBodyWithPolls(body: string, polls: Record<string, ArticlePoll> | undefined, postId: string): ReactNode[] {
-  const marker = /<div\\b(?=[^>]*data-article-poll)(?=[^>]*data-poll-id=["']([^"']+)["'])[^>]*>[\\s\\S]*?<\\/div>/gi;
+  const marker = /<div\b(?=[^>]*data-article-poll)(?=[^>]*data-poll-id=["']([^"']+)["'])[^>]*>[\s\\S]*?<\/div>/gi;
   const output: ReactNode[] = [];
   let cursor = 0;
   let match: RegExpExecArray | null;
