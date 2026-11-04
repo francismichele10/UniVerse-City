@@ -2,12 +2,17 @@
 
 export type PostStatus = 'draft' | 'scheduled' | 'published';
 
+export interface ArticlePollOption { id: string; text: string; }
+
+export interface ArticlePoll { id: string; question: string; options: ArticlePollOption[]; optionIds: string[]; }
+
 export interface Post {
   id: string;              // Firestore doc id
   title: string;
   slug: string;            // URL-friendly, unique, used for /posts/[slug]
   excerpt: string;         // short summary for cards/SEO
   body: string;            // HTML from the rich text editor
+  polls?: Record<string, ArticlePoll>;
   coverImageUrl: string | null;
   category: string;        // e.g. "Announcements", "Sports", "Academics"
   tags: string[];

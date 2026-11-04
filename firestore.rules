@@ -139,6 +139,32 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+
+    match /posts/{postId}/polls/{pollId}/votes/{uid} {
+      function validPollVote() {
+        let post = get(/databases/$(database)/documents/posts/$(postId)).data;
+        return post.status == 'published'
+          && post.polls is map
+          && pollId in post.polls.keys()
+          && post.polls[pollId].optionIds is list
+          && request.resource.data.optionId in post.polls[pollId].optionIds
+          && request.resource.data.keys().hasOnly(['uid', 'optionId', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['uid', 'optionId', 'updatedAt'])
+          && request.resource.data.uid == uid
+          && request.resource.data.updatedAt is timestamp;
+      }
+      allow read: if get(/databases/$(database)/documents/posts/$(postId)).data.status == 'published' || isAdmin();
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && exists(/databases/$(database)/documents/posts/$(postId))
+        && validPollVote();
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && validPollVote()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['optionId', 'updatedAt']);
+      allow delete: if isAdmin();
+    }
+
     match /posts/{postId}/likes/{uid} {
       allow read: if true;
       allow create: if request.auth != null && request.auth.uid == uid;
