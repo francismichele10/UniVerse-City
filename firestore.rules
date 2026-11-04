@@ -145,7 +145,7 @@ service cloud.firestore {
         let post = get(/databases/$(database)/documents/posts/$(postId)).data;
         return post.status == 'published'
           && post.polls is map
-          && pollId in post.polls
+          && pollId in post.polls.keys()
           && post.polls[pollId].optionIds is list
           && request.resource.data.optionId in post.polls[pollId].optionIds
           && request.resource.data.keys().hasOnly(['uid', 'optionId', 'updatedAt'])
